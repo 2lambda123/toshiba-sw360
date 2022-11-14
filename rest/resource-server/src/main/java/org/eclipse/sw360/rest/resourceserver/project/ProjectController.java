@@ -1358,17 +1358,24 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
             return project;
         }
         List<ReleaseLinkJSON> inputNetwork = mapper.readValue(dependencyNetwork, new TypeReference<>() {});
-        Map<String, Integer> mapIndexOfSubRelease = new HashMap<>();
+        Map<String, Integer> indexOfReleases = new HashMap<>();
 
         for (int i = 0; i < inputNetwork.size(); i++) {
             ReleaseLinkJSON node = inputNetwork.get(i);
-            if (mapIndexOfSubRelease.containsKey(node.getReleaseId())) {
-                mapIndexOfSubRelease.replace(node.getReleaseId(), i);
-            }
+            indexOfReleases.put(node.getReleaseId(), i);
+        }
+
+        Map<String, Integer> mapIndexOfSubRelease = new HashMap<>();
+
+        for (ReleaseLinkJSON node : inputNetwork) {
             if (node.getReleaseLink() != null) {
                 for (ReleaseLinkJSON subRelease : node.getReleaseLink()) {
-                    if (!mapIndexOfSubRelease.containsKey(subRelease.getReleaseId())) {
-                        mapIndexOfSubRelease.put(subRelease.getReleaseId(), -1);
+                    String subReleaseId = subRelease.getReleaseId();
+                    if (!mapIndexOfSubRelease.containsKey(subReleaseId)) {
+                        if (!indexOfReleases.containsKey(subReleaseId)) {
+                            throw new NoSuchElementException("Release " + subReleaseId + " information is not declared");
+                        }
+                        mapIndexOfSubRelease.put(subRelease.getReleaseId(), indexOfReleases.get(subReleaseId));
                     }
                 }
             }
