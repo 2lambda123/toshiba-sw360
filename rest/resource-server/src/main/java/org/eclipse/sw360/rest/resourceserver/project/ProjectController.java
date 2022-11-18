@@ -1385,11 +1385,14 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
 
         for (ReleaseLinkJSON release : inputNetwork) {
             if (!mapIndexOfSubRelease.containsKey(release.getReleaseId())) {
+                List<String> loadedReleaseIds = new ArrayList<>();
                 ReleaseLinkJSON releaseLinkJSON = checkAndUpdateNode(release, operation, sw360User);
+                loadedReleaseIds.add(release.getReleaseId());
                 if (release.getReleaseLink() == null || release.getReleaseLink().size() == 0) {
                     releaseLinkJSON.setReleaseLink(new ArrayList<>());
                 } else {
-                    releaseLinkJSON.setReleaseLink(getRelationNetwork(mapIndexOfSubRelease, release, inputNetwork, operation, sw360User));
+                    releaseLinkJSON.setReleaseLink(getRelationNetwork(mapIndexOfSubRelease, release, inputNetwork, operation, sw360User, loadedReleaseIds));
+                    loadedReleaseIds.remove(loadedReleaseIds.size() - 1);
                 }
                 relationNetwork.add(releaseLinkJSON);
             }
@@ -1399,13 +1402,17 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
         return project;
     }
 
-    private List<ReleaseLinkJSON> getRelationNetwork(Map<String, Integer> listSubReleaseId, ReleaseLinkJSON releaseLinkJSON, List<ReleaseLinkJSON> inputNetwork, ProjectOperation operation,User sw360User) throws TException {
+    private List<ReleaseLinkJSON> getRelationNetwork(Map<String, Integer> listSubReleaseId, ReleaseLinkJSON releaseLinkJSON, List<ReleaseLinkJSON> inputNetwork, ProjectOperation operation,User sw360User, List<String> loadedReleaseIds) throws TException {
         List<ReleaseLinkJSON> subReleases = new ArrayList<>();
         for (ReleaseLinkJSON subRelease : releaseLinkJSON.getReleaseLink()) {
             ReleaseLinkJSON releaseByIndex = inputNetwork.get(listSubReleaseId.get(subRelease.getReleaseId()));
             ReleaseLinkJSON release = checkAndUpdateNode(releaseByIndex, operation, sw360User);
-            release.setReleaseLink(getRelationNetwork(listSubReleaseId, releaseByIndex, inputNetwork, operation, sw360User));
-            subReleases.add(release);
+            if (!loadedReleaseIds.contains(subRelease.getReleaseId())) {
+                loadedReleaseIds.add(subRelease.getReleaseId());
+                release.setReleaseLink(getRelationNetwork(listSubReleaseId, releaseByIndex, inputNetwork, operation, sw360User, loadedReleaseIds));
+                loadedReleaseIds.remove(loadedReleaseIds.size() - 1);
+                subReleases.add(release);
+            }
         }
 
         return subReleases;
