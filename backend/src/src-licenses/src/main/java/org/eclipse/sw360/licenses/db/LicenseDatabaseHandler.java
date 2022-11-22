@@ -53,8 +53,6 @@ import static org.eclipse.sw360.datahandler.common.SW360Assert.assertNotNull;
 import static org.eclipse.sw360.datahandler.permissions.PermissionUtils.makePermission;
 import static org.eclipse.sw360.datahandler.thrift.ThriftValidate.*;
 
-import com.liferay.portal.kernel.json.JSONFactoryUtil;
-import com.liferay.portal.kernel.json.JSONArray;
 import org.eclipse.sw360.datahandler.db.DatabaseHandlerUtil;
 import org.eclipse.sw360.datahandler.thrift.changelogs.Operation;
 import com.google.common.collect.Lists;
@@ -1032,7 +1030,7 @@ public class LicenseDatabaseHandler {
     // Read nodes from input and save
     public String addNodes(String jsonString, User user) throws SW360Exception {
         try {
-            com.liferay.portal.kernel.json.JSONObject jsonObject = JSONFactoryUtil.createJSONObject(jsonString);
+            org.json.JSONObject jsonObject = new org.json.JSONObject(jsonString);
             return addNodes(jsonObject, user);
         }
         catch (Exception e) {
@@ -1041,16 +1039,16 @@ public class LicenseDatabaseHandler {
         }
     }
 
-    private String addNodes(com.liferay.portal.kernel.json.JSONObject jsonObject, User user) throws SW360Exception {
+    public String addNodes(org.json.JSONObject jsonObject, User user) throws SW360Exception {
         try {
-            JSONArray jsonArray = jsonObject.getJSONArray("val");
+            org.json.JSONArray jsonArray = jsonObject.getJSONArray("val");
             jsonObject.put("id", addNodeElement(jsonArray, user));
             jsonObject.remove("val");
             for (int i = 0; i < jsonObject.getJSONArray("children").length(); i++) {
-                com.liferay.portal.kernel.json.JSONObject contactObject = jsonObject.getJSONArray("children").getJSONObject(i);
+                org.json.JSONObject contactObject = jsonObject.getJSONArray("children").getJSONObject(i);
                 addNodes(contactObject, user);
             }
-            return jsonObject.toJSONString();
+            return jsonObject.toString();
         }
         catch (Exception e) {
             log.error("Can not add nodes from json object: " + jsonObject);
@@ -1059,7 +1057,7 @@ public class LicenseDatabaseHandler {
     }
 
     // Save node element
-    private String addNodeElement(JSONArray jsonArray, User user) throws SW360Exception {
+    private String addNodeElement(org.json.JSONArray jsonArray, User user) throws SW360Exception {
         if ( jsonArray.length() == 1 ) {
             ObligationNode obligationNode = new ObligationNode();
             obligationNode.setNodeType("ROOT");
@@ -1092,7 +1090,7 @@ public class LicenseDatabaseHandler {
     // Build obligation text from nodes
     public String buildObligationText(String jsonString, int level) throws SW360Exception {
         try {
-            com.liferay.portal.kernel.json.JSONObject jsonObject = JSONFactoryUtil.createJSONObject(jsonString);
+            org.json.JSONObject jsonObject = new org.json.JSONObject(jsonString);
             obligationText = "";
             return buildObligationText(jsonObject, level);
         }
@@ -1102,7 +1100,7 @@ public class LicenseDatabaseHandler {
         }
     }
 
-    private String buildObligationText(com.liferay.portal.kernel.json.JSONObject jsonObject, int level) {
+    private String buildObligationText(org.json.JSONObject jsonObject, int level) {
         StringBuilder prefix = new StringBuilder("");
         for (int j = 1; j < level; j++) {
             prefix = prefix.append("\t");
@@ -1125,7 +1123,7 @@ public class LicenseDatabaseHandler {
         }
         if (jsonObject.getJSONArray("children").length() != 0 ) {
             for (int i = 0; i < jsonObject.getJSONArray("children").length(); i++) {
-                com.liferay.portal.kernel.json.JSONObject contactObject = jsonObject.getJSONArray("children").getJSONObject(i);
+                org.json.JSONObject contactObject = jsonObject.getJSONArray("children").getJSONObject(i);
                 buildObligationText(contactObject, level+1);
             }
         }
