@@ -325,6 +325,9 @@
                 let currentLayer =  $(this).closest('tr').attr('data-layer');
                 let parentNode = $(this).closest('tr').attr('parent-node');
                 let currentIndex = $(this).closest('tr').attr('data-index');
+                let version = $(this).closest('tr').find('select').eq(0).find('option:selected').text().trim();
+                let componentName = $(this).closest('tr').find('td').eq(0).find('div').eq(0).text().trim();
+
                 let i=0;
                 let trace = [];
                 trace.unshift(currentIndex);
@@ -335,7 +338,7 @@
                 }
 
                 dialog.open('#deleteReleaseInNetworkDialog', {
-                    release: current
+                    release: componentName + '(' + version + ')'
                 }, function(submit, callback) {
                      removeNodeFromNetwork(releaseWithRelations, i, trace);
                      $('#LinkedReleasesNetwork tbody').empty();
@@ -386,7 +389,7 @@
                 }
             }
 
-            function changeReleaseIdInNode() {
+            async function changeReleaseIdInNode() {
                let idValue = $(this).closest('tr').find('select').eq(0).val();
                let oldSelect = $(this).closest('tr').find('select').eq(0).attr('data-old');
                let currentLayer =  $(this).closest('tr').attr('data-layer');
@@ -398,13 +401,33 @@
                let trace = [];
                trace.unshift(currentIndex);
 
+               let releaseIdTrace = [];
+               releaseIdTrace.push(parentNode);
+
+               let messages = [];
                for(let layer = currentLayer - 1; layer >= 0; layer-- ) {
                     trace.unshift($(this).closest('tr').prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('data-index'));
                     parentNode =  $(this).closest('tr').prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('parent-node');
+                    releaseIdTrace.push(parentNode);
                }
+
+               // Remove empty releaseId
+               releaseIdTrace.pop();
+
                if (checkDuplicateReleaseWithSameLevel(trace, idValue)) {
                    $(this).closest('tr').find('select').eq(0).val(oldSelect);
-                   displayAlert('Release ' + componentName + '(' + version + ')' + ' duplicated :(');
+                   messages.push('<p>Release <b>' + componentName + '(' + version + ')</b>' + ' duplicated!!!</p>');
+               }
+
+               for (let parentId of releaseIdTrace) {
+                   let cyclicLinkedReleasePath = await getCyclicLinkedReleasePath('<%=PortalConstants.CYCLIC_LINKED_RELEASE_PATH%>', parentId, idValue);
+                   if (cyclicLinkedReleasePath !== "") {
+                       $(this).closest('tr').find('select').eq(0).val(oldSelect);
+                       messages.push('<p>Cyclic Hierarchy: <b>' + cyclicLinkedReleasePath + '</b></p>');
+                   }
+               }
+               if (messages.length != 0) {
+                   displayAlert(messages);
                    return;
                }
                replaceValueOfNode(releaseWithRelations, i, trace, idValue, "", "releaseId");
@@ -600,6 +623,8 @@
                 let parentId = selectedElement.attr('id').substring(14);
                 let parentLayer = parseInt(selectedElement.attr('data-layer'));
                 let currentIndex = selectedElement.attr('data-index');
+                let releaseName = selectedElement.find('td').eq(0).find('div').text().trim();
+                let releaseVersion = selectedElement.find('td').eq(1).text().trim();
 
                 if($dataTable) {
                     $dataTable.destroy();
@@ -612,11 +637,23 @@
                     var releaseNames = [];
 
                     let parentNode = selectedElement.attr('parent-node');
-                    let trace = [];
-                    trace.unshift(currentIndex);
+                    let indexTrace = [];
+                    let releaseTrace = [];
+                    let hierarchyName = [];
+
+                    indexTrace.unshift(currentIndex);
+                    releaseTrace.unshift(parentId);
+                    hierarchyName.unshift(releaseName + ' (' + releaseVersion + ')');
 
                     for(let layer = parentLayer - 1; layer >= 0; layer-- ) {
-                        trace.unshift(selectedElement.prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('data-index'));
+                        indexTrace.unshift(selectedElement.prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('data-index'));
+
+                        releaseName = selectedElement.prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').find('td').eq(0).find('div').text().trim();
+                        releaseVersion = selectedElement.prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').find('td').eq(1).text().trim();
+
+                        releaseTrace.unshift(parentNode);
+                        hierarchyName.unshift(releaseName + ' (' + releaseVersion + ')');
+
                         parentNode = selectedElement.prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('parent-node');
                     }
 
@@ -636,12 +673,34 @@
                     let selectedReleases = [];
                     let releaseDuplicates = [];
                     let i=0;
+                    let messages = [];
+                    let indexOfNode = numberOfNodeSameLevel;
                     for (let [index, releaseId] of releaseIds.entries()) {
-                        let indexOfNode = numberOfNodeSameLevel + index;
-                        if (checkDuplicateSubRelease(trace, releaseId)) {
+                        let cyclicLink = false;
+
+                        for (let releaseIdParent of releaseTrace) {
+                            let cyclicLinkedReleasePath = await getCyclicLinkedReleasePath('<%=PortalConstants.CYCLIC_LINKED_RELEASE_PATH%>', releaseIdParent, releaseId);
+                            if (cyclicLinkedReleasePath !== "") {
+                                messages.push('<p>Cyclic Hierarchy: <b>' + cyclicLinkedReleasePath + '</b></p>');
+                                cyclicLink = true;
+                            }
+                        }
+
+                        if (cyclicLink == true) {
+                            continue;
+                        }
+
+                        if (checkDuplicateSubRelease(indexTrace, releaseId)) {
                             releaseDuplicates.push(releaseNames[index]);
                             continue;
                         }
+                        /*
+                        if (checkCyclicHierarchy(releaseTrace, releaseId)) {
+                            messages.push('Cyclic Hierarchy: ' + hierarchyName.join(' -> ') + ' -> ' + releaseNames[index]);
+                            continue;
+                        }
+                        */
+
                         let releaseWithIdExisted = await checkReleaseExist('<%=PortalConstants.CHECK_RELEASE_EXIST%>', releaseId);
                         if (releaseWithIdExisted != null && releaseWithIdExisted == true) {
                             canLinkReleases.push(releaseId);
@@ -662,14 +721,18 @@
                             }
                             selectedReleases.push(selectedRelease);
                         }
+                        indexOfNode += 1;
                     }
 
-                    addChildNode(releaseWithRelations, i, trace, selectedReleases);
+                    addChildNode(releaseWithRelations, i, indexTrace, selectedReleases);
                     let releaseRows = await addReleaseToTable('<%=PortalConstants.CREATE_LINKED_RELEASE_ROW%>', canLinkReleases, parentIds, levels, mainlineStates, releaseRelationships, indexOfNodes, comments);
                     selectedElement.after(releaseRows);
                     $('#releaseRelationTree').val(JSON.stringify(releaseWithRelations));
                     if (releaseDuplicates.length > 0) {
-                        displayAlert('Releases duplicated: ' + releaseDuplicates.join(', '));
+                        messages.push('<p>Releases duplicated: <b>' + releaseDuplicates.join(', ') + '</b></p>');
+                    }
+                    if (messages.length > 0) {
+                        displayAlert(messages);
                     }
                     callback(true);
                 }, function() {
@@ -757,6 +820,8 @@
                     let indexOfNodes = [];
                     let comments = [];
                     let releaseDuplicates = [];
+                    let messages = [];
+
                     for (let [index, releaseId] of releaseIds.entries()) {
                         let indexOfNode = numberOfRootExisted + index;
                         let numberOfReleaseWithSameId = $('tr[parent-node=""][id="releaseLinkRow' + releaseId + '"]').length;
@@ -789,7 +854,8 @@
                     $('#LinkedReleasesNetwork tbody').append(releaseRows);
                     $('#releaseRelationTree').val(JSON.stringify(releaseWithRelations));
                     if (releaseDuplicates.length > 0) {
-                        displayAlert('Releases duplicated: ' + releaseDuplicates.join(', '));
+                        messages.push('<p>Releases duplicated: <b>' + releaseDuplicates.join(', ') + '</b></p>');
+                        displayAlert(messages);
                     }
                     callback(true);
                 }, function() {
@@ -916,13 +982,15 @@
                 });
             }
 
-            function checkDuplicateSubRelease(trace, releaseId) {
+            function checkDuplicateSubRelease(indexTrace, releaseId) {
                 let node = releaseWithRelations;
-                for (let i = 0; i < trace.length; i++) {
-                    node = node[trace[i]];
-                    let releasesWithSameRoot = node.releaseLink.map((subNode) => subNode.releaseId);
-                    if (releasesWithSameRoot.includes(releaseId)) {
-                        return true;
+                for (let i = 0; i < indexTrace.length; i++) {
+                    node = node[indexTrace[i]];
+                    if (i == (indexTrace.length - 1)) {
+                        let releasesWithSameRoot = node.releaseLink.map((subNode) => subNode.releaseId);
+                        if (releasesWithSameRoot.includes(releaseId)) {
+                            return true;
+                        }
                     }
                     node = node.releaseLink;
                 }
@@ -936,13 +1004,14 @@
                     if (releasesWithSameRoot.includes(releaseId)) {
                         return true;
                     }
-                }
-                else {
+                } else {
                     for (let i = 0; i < trace.length - 1; i++) {
                         node = node[trace[i]];
-                        let releasesWithSameRoot = node.releaseLink.map((subNode) => subNode.releaseId);
-                        if (releasesWithSameRoot.includes(releaseId)) {
-                            return true;
+                        if (i == (trace.length - 2)) {
+                            let releasesWithSameRoot = node.releaseLink.map((subNode) => subNode.releaseId);
+                            if (releasesWithSameRoot.includes(releaseId)) {
+                                return true;
+                            }
                         }
                         node = node.releaseLink;
                     }
@@ -950,13 +1019,42 @@
                 return false;
             }
 
-            function displayAlert(text) {
-                $('.show-alert .alert-message').text(text);
+            function checkCyclicHierarchy(releaseTrace, releaseId) {
+                if (releaseTrace.includes(releaseId)) {
+                    return true;
+                }
+                return false;
+            }
+
+            function displayAlert(messages) {
+                for(let message of messages) {
+                    $('.show-alert .alert-message').append(message);
+                }
                 $('.show-alert').css('display','block');
                 setTimeout(() => {
-                    $('.show-alert .alert-message').text('');
+                    $('.show-alert .alert-message').empty();
                     $('.show-alert').css('display','none');
-                }, 5000);
+                }, 7000);
+            }
+
+            function getCyclicLinkedReleasePath(what, parentId, childReleaseId){
+                return new Promise(function(resolve, reject) {
+                    jQuery.ajax({
+                        type: 'POST',
+                        url: '<%=viewReleaseURL%>',
+                        data: {
+                            '<portlet:namespace/><%=PortalConstants.WHAT%>': what,
+                            '<portlet:namespace/><%=PortalConstants.RELEASE_ID%>': parentId,
+                            '<portlet:namespace/><%=PortalConstants.CHILD_RELEASE_ID%>': childReleaseId
+                        },
+                        success: function (data) {
+                            resolve(data.data.hierarchy);
+                        },
+                        error: function() {
+                            reject("");
+                        }
+                    });
+                });
             }
         });
     });

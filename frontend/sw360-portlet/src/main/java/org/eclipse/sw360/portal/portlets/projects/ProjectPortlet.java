@@ -1258,6 +1258,8 @@ public class ProjectPortlet extends FossologyAwarePortlet {
         } else if (PortalConstants.CHECK_RELEASE_EXIST.equals(what)) {
             String releaseId = request.getParameter(PortalConstants.RELEASE_ID);
             severCheckReleaseExistOrAccessibleToLink(request, response, releaseId);
+        } else if (PortalConstants.CYCLIC_LINKED_RELEASE_PATH.equals(what)) {
+            getCyclicLinkedOfReleases(request, response);
         }
     }
 
@@ -3338,5 +3340,35 @@ public class ProjectPortlet extends FossologyAwarePortlet {
         } catch (IOException e) {
             log.error(e.getMessage());
         }
+    }
+
+    private void getCyclicLinkedOfReleases(ResourceRequest request, ResourceResponse response) throws IOException {
+        User user = UserCacheHolder.getUserFromRequest(request);
+        String releaseId = request.getParameter(RELEASE_ID);
+        String childReleaseId = request.getParameter(CHILD_RELEASE_ID);
+        final ComponentService.Iface releaseClient = thriftClients.makeComponentClient();
+        Map<String, Map<String, String>> result = new HashMap<String, Map<String, String>>();
+
+        try {
+            Release releaseById = releaseClient.getAccessibleReleaseById(releaseId, user);
+            Map<String, ReleaseRelationship> releaseRelationshipMap = new HashMap<>();
+            releaseRelationshipMap.put(childReleaseId, ReleaseRelationship.CONTAINED);
+            releaseById.setReleaseIdToRelationship(releaseRelationshipMap);
+            String cyclicLinkedReleasePath = releaseClient.getCyclicLinkedReleasePath(releaseById, user);
+            Map<String, String> data = new HashMap<>();
+            data.put("hierarchy", cyclicLinkedReleasePath);
+            result.put("data", data);
+        } catch (TException e) {
+            log.error("Cannot fetch release " + releaseId + " from backend", e);
+            result.put("error", new HashMap<String, String>());
+        }
+
+        JSONObject jsonObject = JSONFactoryUtil.createJSONObject();
+        try {
+            jsonObject = createJSONObject(PortletUtils.convertObjectToJsonStr(result));
+        } catch (JSONException e) {
+            log.error("Error occured while creating JSON.", e);
+        }
+        writeJSON(request, response, jsonObject);
     }
 }

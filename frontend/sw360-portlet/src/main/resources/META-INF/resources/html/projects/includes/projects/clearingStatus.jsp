@@ -459,10 +459,10 @@ AUI().use('liferay-portlet-url', function () {
                 infoOnTop: true,
                 columns: [
                     {title: "<liferay-ui:message key="name" />", data : "name", "defaultContent": "", render: {display: detailUrl} },
-                    {title: "<liferay-ui:message key="type" />", data : "type", "defaultContent": ""},
+                    {title: "", data : "type", "defaultContent": ""},
                     {title: "<liferay-ui:message key="project.path" />", data : "projectOrigin", "defaultContent": "", render: $.fn.dataTable.render.text() },
                     {title: "<liferay-ui:message key="release.path" />", data : "releaseOrigin", "defaultContent": "", render: $.fn.dataTable.render.text() },
-                    {title: "<liferay-ui:message key="relation" />", data : "relation", "defaultContent": ""},
+                    {title: "", data : "relation", "defaultContent": ""},
                     {title: "<liferay-ui:message key="main.licenses" />", data : "mainLicenses", "defaultContent": "", render: {display: mainLicenseUrl}},
                     {title: "", "data": function(row) {
                     	if(row.isAccessible === "false"){

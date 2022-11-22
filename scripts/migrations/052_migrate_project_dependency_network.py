@@ -45,7 +45,7 @@ log['Error updated project'] = []
 log['Success updated project'] = []
 log['Project will be update with DRY RUN'] = []
 # query get all project with field "releaseIdToUsage"
-get_projects_with_releaseIdToUsage_field_query = {"selector": {"type": {"$eq": "project"}, deleteFieldName: {"$exists": True}}}
+get_projects_with_releaseIdToUsage_field_query = {"selector": {"type": {"$eq": "project"}, deleteFieldName: {"$exists": True}}, "limit": 100000}
 
 def get_children_node(id, createBy, createOn):
     get_release_by_id = {"selector":{"type": {"$eq":"release"}, "_id":{"$eq":id}}}
@@ -65,7 +65,7 @@ def get_children_node(id, createBy, createOn):
                     'releaseLink': get_children_node(release_id, createBy, createOn)
                 }
                 children_nodes.append(node)
-       
+
     return children_nodes
 
 
@@ -76,46 +76,38 @@ def applyTranferData(project, log):
         db.save(project)
         print 'Removing field name ' + deleteFieldName + ' and add field ' + newFieldName + ' done for project ' + project.get('_id')
         log['Success updated project'].append(updatedDocId)
-    else: 
+    else:
         log['Project will be update with DRY RUN'].append(updatedDocId)
 
 
 def run():
     print 'Getting all project with field releaseIdToUsage'
-    updated_project = []
-    while True:
-        project_with_releaseIdToUsage_field = db.find(get_projects_with_releaseIdToUsage_field_query)
-        if len(project_with_releaseIdToUsage_field) == 0:
-            break
+    project_with_releaseIdToUsage_field = db.find(get_projects_with_releaseIdToUsage_field_query)
 
-        for project in project_with_releaseIdToUsage_field:
-            if project["_id"] in updated_project:
-                return
-            else: 
-                print 'migrating for project: ' + project["_id"]
-                updated_project.append(project["_id"])
-                dependency_network = []
-                try:
-                    for release_id, relation_with_project in project.get('releaseIdToUsage').items():
-                        createOn = relation_with_project.get('createdOn')
-                        createBy = relation_with_project.get('createdBy')
-                        node = {
-                            'releaseId': release_id,
-                            'releaseRelationship':relation_with_project.get('releaseRelation'),
-                            'mainlineState': relation_with_project.get('mainlineState'),
-                            'createOn': createOn,
-                            'createBy': createBy,
-                            'comment': relation_with_project.get('comment'),
-                            'releaseLink': get_children_node(release_id, createBy, createOn)
-                        }
-                        dependency_network.append(node)
-                    project['releaseRelationNetwork'] = json.dumps(dependency_network, separators=(',', ':'))
+    for project in project_with_releaseIdToUsage_field:
+        print 'migrating for project: ' + project["_id"]
+        dependency_network = []
+        try:
+            for release_id, relation_with_project in project.get('releaseIdToUsage').items():
+                createOn = relation_with_project.get('createdOn')
+                createBy = relation_with_project.get('createdBy')
+                node = {
+                    'releaseId': release_id,
+                    'releaseRelationship':relation_with_project.get('releaseRelation'),
+                    'mainlineState': relation_with_project.get('mainlineState'),
+                    'createOn': createOn,
+                    'createBy': createBy,
+                    'comment': relation_with_project.get('comment'),
+                    'releaseLink': get_children_node(release_id, createBy, createOn)
+                }
+                dependency_network.append(node)
+            project['releaseRelationNetwork'] = json.dumps(dependency_network, separators=(',', ':'))
 
-                    del project['releaseIdToUsage']
+            del project['releaseIdToUsage']
 
-                    applyTranferData(project, log)
-                except:
-                    log['Error updated project'].append({"id": project['_id']})
+            applyTranferData(project, log)
+        except:
+            log['Error updated project'].append({"id": project['_id']})
 # --------------------------------
 
 def writeLog():
