@@ -1253,13 +1253,16 @@ public class ProjectPortlet extends FossologyAwarePortlet {
             try {
                 serveReleaseRelationNetworkOfNode(request, response, releaseId);
             } catch (TException e) {
-                throw new RuntimeException(e);
+                log.error(e.getMessage());
             }
         } else if (PortalConstants.CHECK_RELEASE_EXIST.equals(what)) {
             String releaseId = request.getParameter(PortalConstants.RELEASE_ID);
             severCheckReleaseExistOrAccessibleToLink(request, response, releaseId);
         } else if (PortalConstants.CYCLIC_LINKED_RELEASE_PATH.equals(what)) {
             getCyclicLinkedOfReleases(request, response);
+        } else if (PortalConstants.RELEASES_WITH_SAME_COMPONENT_ID.equals(what)) {
+            String releaseId = request.getParameter(PortalConstants.RELEASE_ID);
+            serveReleasesWithSameComponent(request, response, releaseId);
         }
     }
 
@@ -3274,24 +3277,11 @@ public class ProjectPortlet extends FossologyAwarePortlet {
         try {
             List<String> listReleaseIds = Arrays.asList(linkedIds);
             List<Release> releases = client.getReleasesByListIds(listReleaseIds, user);
-            List<Release> allReleases = client.getAllReleasesForUser(user);
-            Map<String, List<Release>> listReleaseWithSameComponentId = new HashMap<>();
-            allReleases.forEach(release -> {
-                String componentId = release.getComponentId();
-                List<Release> releasesOfComponent;
-                if (listReleaseWithSameComponentId.containsKey(componentId)) {
-                    releasesOfComponent = listReleaseWithSameComponentId.get(componentId);
-                } else {
-                    releasesOfComponent = new ArrayList<>();
-                }
-                releasesOfComponent.add(release);
-                listReleaseWithSameComponentId.put(componentId, releasesOfComponent);
-            });
             for (int index = 0; index < releases.size(); index++) {
                 final Vendor vendor = releases.get(index).getVendor();
                 final String vendorName = vendor != null ? vendor.getShortname() : "";
                 Release loadingRelease =  releases.get(index);
-                List<Release> releasesWithSameComponent = listReleaseWithSameComponentId.get(loadingRelease.getComponentId());
+                List<Release> releasesWithSameComponent = Collections.singletonList(loadingRelease);
                 ReleaseLink linkedRelease = new ReleaseLink(releases.get(index).getId(), vendorName, releases.get(index).getName(), releases.get(index).getVersion(),
                         SW360Utils.printFullname(releases.get(index)), !nullToEmptyMap(releases.get(index).getReleaseIdToRelationship()).isEmpty());
                 linkedRelease.setReleaseWithSameComponent(releasesWithSameComponent);
@@ -3370,5 +3360,33 @@ public class ProjectPortlet extends FossologyAwarePortlet {
             log.error("Error occured while creating JSON.", e);
         }
         writeJSON(request, response, jsonObject);
+    }
+
+    private void serveReleasesWithSameComponent(ResourceRequest request, ResourceResponse response, String releaseId) {
+        ComponentService.Iface releaseClient = thriftClients.makeComponentClient();
+        User user = UserCacheHolder.getUserFromRequest(request);
+        JSONObject jsonObject = JSONFactoryUtil.createJSONObject();
+        Map<String, String> releaseIdWithVersion = null;
+
+        try {
+            Release release = releaseClient.getAccessibleReleaseById(releaseId, user);
+            List<Release> releasesWithSameComponentId = releaseClient.getReleasesByComponentId(release.getComponentId(), user);
+            releaseIdWithVersion = releasesWithSameComponentId.stream().filter(rel -> !rel.getId().equals(releaseId))
+                                                            .collect(Collectors.toMap(Release::getId, Release::getVersion));
+        } catch (TException e) {
+            log.error(e.getMessage());
+        }
+
+        if (releaseIdWithVersion == null) {
+            releaseIdWithVersion = Collections.emptyMap();
+        }
+
+        jsonObject.put(PortalConstants.RESULT, releaseIdWithVersion);
+
+        try {
+            writeJSON(request, response, jsonObject);
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
     }
 }

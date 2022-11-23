@@ -354,9 +354,10 @@
             $('#LinkedReleasesNetwork').on('change', '.projectReleaseRelation', changeReleaseRelation);
             $('#LinkedReleasesNetwork').on('change', '.mainlineState', changeMainLineState);
             $('#LinkedReleasesNetwork').on('focusout', '.releaseComment', changeComment);
+            $('#LinkedReleasesNetwork').on('focus', '.releaseVersion', loadReleasesWithSameComponent);
 
             async function displayRelationOfNode(){
-               let newSelect = $(this).closest('tr').find('select').eq(0).val();
+               let newSelect = $(this).closest('tr').find('select').eq(0).val().trim();
                let oldSelect = $(this).closest('tr').find('select').eq(0).attr('data-old');
                let currentLayer =  $(this).closest('tr').attr('data-layer');
                let parentNode = $(this).closest('tr').attr('parent-node');
@@ -1026,18 +1027,28 @@
                 return false;
             }
 
-            function displayAlert(messages) {
-                for(let message of messages) {
-                    $('.show-alert .alert-message').append(message);
+            async function loadReleasesWithSameComponent() {
+                let options = $(this).find('option');
+                let selectedRelease = $(this).val().trim();
+                let loadedRelease = [];
+                for (let option of options) {
+                    loadedRelease.push($(option).val().trim());
                 }
-                $('.show-alert').css('display','block');
-                setTimeout(() => {
-                    $('.show-alert .alert-message').empty();
-                    $('.show-alert').css('display','none');
-                }, 7000);
+
+                let releasesWithSameComponent = await getReleasesWithSameComponent('<%=PortalConstants.RELEASES_WITH_SAME_COMPONENT_ID%>', selectedRelease);
+                releasesWithSameComponent = new Map(Object.entries(releasesWithSameComponent));
+
+                releasesWithSameComponent.forEach((version, releaseId) => {
+                    if (!loadedRelease.includes(releaseId)) {
+                        $(this).append($('<option>', {
+                            value: releaseId,
+                            text: version
+                        }));
+                    }
+                })
             }
 
-            function getCyclicLinkedReleasePath(what, parentId, childReleaseId){
+            function getCyclicLinkedReleasePath(what, parentId, childReleaseId) {
                 return new Promise(function(resolve, reject) {
                     jQuery.ajax({
                         type: 'POST',
@@ -1055,6 +1066,36 @@
                         }
                     });
                 });
+            }
+
+            function getReleasesWithSameComponent(what, releaseId){
+                return new Promise(function(resolve, reject) {
+                    jQuery.ajax({
+                        type: 'POST',
+                        url: '<%=viewReleaseURL%>',
+                        data: {
+                            '<portlet:namespace/><%=PortalConstants.WHAT%>': what,
+                            '<portlet:namespace/><%=PortalConstants.RELEASE_ID%>': releaseId
+                        },
+                        success: function (data) {
+                            resolve(data.result);
+                        },
+                        error: function() {
+                            reject({});
+                        }
+                    });
+                });
+            }
+
+            function displayAlert(messages) {
+                for(let message of messages) {
+                    $('.show-alert .alert-message').append(message);
+                }
+                $('.show-alert').css('display','block');
+                setTimeout(() => {
+                    $('.show-alert .alert-message').empty();
+                    $('.show-alert').css('display','none');
+                }, 7000);
             }
         });
     });
