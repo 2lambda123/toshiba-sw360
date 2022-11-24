@@ -13,6 +13,7 @@ package org.eclipse.sw360.rest.resourceserver.project;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.google.gson.Gson;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -314,7 +315,7 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
                     .buildAndExpand(project.getId()).toUri();
 
             return ResponseEntity.created(location).body(halResource);
-        } catch (JsonProcessingException | ResourceNotFoundException | NoSuchElementException e) {
+        } catch (JsonProcessingException | ResourceNotFoundException | NoSuchElementException| InvalidPropertiesFormatException e) {
             log.error(e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -333,7 +334,7 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
         Project updateProject = null;
         try {
             updateProject = convertToProject(reqBodyMap, ProjectOperation.CREATE);
-        } catch (JsonProcessingException | ResourceNotFoundException | NoSuchElementException e) {
+        } catch (JsonProcessingException | ResourceNotFoundException | NoSuchElementException | InvalidPropertiesFormatException e) {
             log.error(e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -831,7 +832,7 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
             }
 
             return ResponseEntity.ok().body(userHalResource);
-        } catch (JsonProcessingException | ResourceNotFoundException | NoSuchElementException e) {
+        } catch (JsonProcessingException | ResourceNotFoundException | NoSuchElementException | InvalidPropertiesFormatException e) {
             log.error(e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -1102,7 +1103,7 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
         return true;
     }
 
-    private Project convertToProject(Map<String, Object> requestBody, ProjectOperation operation) throws JsonProcessingException, TException {
+    private Project convertToProject(Map<String, Object> requestBody, ProjectOperation operation) throws JsonProcessingException, TException, InvalidPropertiesFormatException {
         User sw360User = restControllerHelper.getSw360UserFromAuthentication();
 
         ObjectMapper mapper = new ObjectMapper();
@@ -1161,7 +1162,9 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
                         releaseLink.setReleaseLink(Collections.emptyList());
                         continue;
                     }
-                    checkValidInput(releaseLink.getReleaseLink(), operation);
+                    List<String> loadedReleases = new ArrayList<>();
+                    loadedReleases.add(releaseLink.getReleaseId());
+                    checkValidInput(releaseLink.getReleaseLink(), operation, loadedReleases);
                 }
             }
             project.setReleaseRelationNetwork(new Gson().toJson(releaseLinkJSONS));
@@ -1182,10 +1185,18 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
         return null;
     }
 
-    private void checkValidInput(List<ReleaseLinkJSON> releaseLinks, ProjectOperation operation) throws TException {
+    private void checkValidInput(List<ReleaseLinkJSON> releaseLinks, ProjectOperation operation, List<String> loadedReleases) throws TException, InvalidPropertiesFormatException {
         User sw360User = restControllerHelper.getSw360UserFromAuthentication();
         for (ReleaseLinkJSON releaseLink : releaseLinks) {
             releaseService.getReleaseForUserById(releaseLink.getReleaseId(), sw360User);
+
+            if (loadedReleases.contains(releaseLink.getReleaseId())) {
+                loadedReleases.add(releaseLink.getReleaseId());
+                String cyclicHierarchy = String.join(" -> ", loadedReleases);
+                throw new InvalidPropertiesFormatException("Cyclic hierarchy in dependency network: " + cyclicHierarchy);
+            }
+
+            loadedReleases.add(releaseLink.getReleaseId());
             String mainLineStateUpper = (releaseLink.getMainlineState() != null) ? releaseLink.getMainlineState().toUpperCase() : MainlineState.OPEN.toString();
             String releaseRelationShipUpper = (releaseLink.getReleaseRelationship() != null) ? releaseLink.getReleaseRelationship().toUpperCase() : ReleaseRelationship.CONTAINED.toString();
 
@@ -1212,9 +1223,11 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
             releaseLink.setComment(releaseLink.getComment());
             if(releaseLink.getReleaseLink() == null) {
                 releaseLink.setReleaseLink(Collections.emptyList());
+                loadedReleases.remove(loadedReleases.size() - 1);
                 continue;
             }
-            checkValidInput(releaseLink.getReleaseLink(), operation);
+            checkValidInput(releaseLink.getReleaseLink(), operation, loadedReleases);
+            loadedReleases.remove(loadedReleases.size() - 1);
         }
     }
 
