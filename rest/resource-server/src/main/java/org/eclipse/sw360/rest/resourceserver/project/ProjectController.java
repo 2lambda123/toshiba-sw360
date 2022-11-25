@@ -22,6 +22,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.thrift.TException;
 import org.apache.thrift.TSerializer;
+import org.eclipse.sw360.datahandler.thrift.components.*;
 import org.springframework.data.domain.Pageable;
 import org.apache.thrift.protocol.TSimpleJSONProtocol;
 import org.eclipse.sw360.datahandler.common.CommonUtils;
@@ -42,10 +43,6 @@ import org.eclipse.sw360.datahandler.thrift.attachments.AttachmentType;
 import org.eclipse.sw360.datahandler.thrift.attachments.AttachmentUsage;
 import org.eclipse.sw360.datahandler.thrift.attachments.LicenseInfoUsage;
 import org.eclipse.sw360.datahandler.thrift.attachments.UsageData;
-import org.eclipse.sw360.datahandler.thrift.components.ClearingState;
-import org.eclipse.sw360.datahandler.thrift.components.Release;
-import org.eclipse.sw360.datahandler.thrift.components.ReleaseLink;
-import org.eclipse.sw360.datahandler.thrift.components.ReleaseLinkJSON;
 import org.eclipse.sw360.datahandler.thrift.licenseinfo.LicenseInfo;
 import org.eclipse.sw360.datahandler.thrift.licenseinfo.LicenseInfoFile;
 import org.eclipse.sw360.datahandler.thrift.licenseinfo.LicenseInfoParsingResult;
@@ -1127,13 +1124,19 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
         List<ReleaseLinkJSON> releaseLinkJSONS = new ArrayList<>();
         String dependencyNetwork = objectMapper.writeValueAsString(requestBody.get("dependencyNetwork"));
+        List<ReleaseLinkJSON> uniqueDependencyNetwork = new ArrayList<>();
 
         if (dependencyNetwork != null && !dependencyNetwork.equals("null")) {
             releaseLinkJSONS = objectMapper.readValue(dependencyNetwork, new TypeReference<List<ReleaseLinkJSON>>() {
             });
 
             if (releaseLinkJSONS != null) {
+                List<String> releaseWithSameLevel = new ArrayList<>();
                 for (ReleaseLinkJSON releaseLink : releaseLinkJSONS) {
+                    if (releaseWithSameLevel.contains(releaseLink.getReleaseId())) {
+                        continue;
+                    }
+                    releaseWithSameLevel.add(releaseLink.getReleaseId());
                     releaseService.getReleaseForUserById(releaseLink.getReleaseId(), sw360User);
                     String mainLineStateUpper = (releaseLink.getMainlineState() != null) ? releaseLink.getMainlineState().toUpperCase() : MainlineState.OPEN.toString();
                     String releaseRelationShipUpper = (releaseLink.getReleaseRelationship() != null) ? releaseLink.getReleaseRelationship().toUpperCase() : ReleaseRelationship.CONTAINED.toString();
@@ -1164,10 +1167,11 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
                     }
                     List<String> loadedReleases = new ArrayList<>();
                     loadedReleases.add(releaseLink.getReleaseId());
-                    checkValidInput(releaseLink.getReleaseLink(), operation, loadedReleases);
+                    releaseLink.setReleaseLink(checkAndUpdateSubNodes(releaseLink.getReleaseLink(), operation, loadedReleases));
+                    uniqueDependencyNetwork.add(releaseLink);
                 }
             }
-            project.setReleaseRelationNetwork(new Gson().toJson(releaseLinkJSONS));
+            project.setReleaseRelationNetwork(new Gson().toJson(uniqueDependencyNetwork));
         }
         else {
             project.setReleaseRelationNetwork(null);
@@ -1185,9 +1189,15 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
         return null;
     }
 
-    private void checkValidInput(List<ReleaseLinkJSON> releaseLinks, ProjectOperation operation, List<String> loadedReleases) throws TException, InvalidPropertiesFormatException {
+    private List<ReleaseLinkJSON> checkAndUpdateSubNodes(List<ReleaseLinkJSON> releaseLinks, ProjectOperation operation, List<String> loadedReleases) throws TException, InvalidPropertiesFormatException {
         User sw360User = restControllerHelper.getSw360UserFromAuthentication();
+        List<ReleaseLinkJSON> uniqueDependencyNetwork = new ArrayList<>();
+        List<String> releaseIdsWithSameLevel = new ArrayList<>();
         for (ReleaseLinkJSON releaseLink : releaseLinks) {
+            if (releaseIdsWithSameLevel.contains(releaseLink.getReleaseId())) {
+                continue;
+            }
+            releaseIdsWithSameLevel.add(releaseLink.getReleaseId());
             releaseService.getReleaseForUserById(releaseLink.getReleaseId(), sw360User);
 
             if (loadedReleases.contains(releaseLink.getReleaseId())) {
@@ -1226,9 +1236,11 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
                 loadedReleases.remove(loadedReleases.size() - 1);
                 continue;
             }
-            checkValidInput(releaseLink.getReleaseLink(), operation, loadedReleases);
+            releaseLink.setReleaseLink(checkAndUpdateSubNodes(releaseLink.getReleaseLink(), operation, loadedReleases));
+            uniqueDependencyNetwork.add(releaseLink);
             loadedReleases.remove(loadedReleases.size() - 1);
         }
+        return uniqueDependencyNetwork;
     }
 
     private HalResource<ProjectDTO> createHalProjectDTOResourceWithAllDetails(Project sw360Project, User sw360User,
@@ -1395,13 +1407,18 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
         }
 
         List<ReleaseLinkJSON> relationNetwork = new ArrayList<>();
-
+        List<String> releaseWithSameLevel = new ArrayList<>();
         for (ReleaseLinkJSON release : inputNetwork) {
             if (!mapIndexOfSubRelease.containsKey(release.getReleaseId())) {
+                if (releaseWithSameLevel.contains(release.getReleaseId())) {
+                    continue;
+                }
+                releaseWithSameLevel.add(release.getReleaseId());
+
                 List<String> loadedReleaseIds = new ArrayList<>();
                 ReleaseLinkJSON releaseLinkJSON = checkAndUpdateNode(release, operation, sw360User);
                 loadedReleaseIds.add(release.getReleaseId());
-                if (release.getReleaseLink() == null || release.getReleaseLink().size() == 0) {
+                if (release.getReleaseLink() == null || release.getReleaseLink().isEmpty()) {
                     releaseLinkJSON.setReleaseLink(new ArrayList<>());
                 } else {
                     releaseLinkJSON.setReleaseLink(getRelationNetwork(mapIndexOfSubRelease, release, inputNetwork, operation, sw360User, loadedReleaseIds));
@@ -1417,7 +1434,13 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
 
     private List<ReleaseLinkJSON> getRelationNetwork(Map<String, Integer> listSubReleaseId, ReleaseLinkJSON releaseLinkJSON, List<ReleaseLinkJSON> inputNetwork, ProjectOperation operation,User sw360User, List<String> loadedReleaseIds) throws TException {
         List<ReleaseLinkJSON> subReleases = new ArrayList<>();
+        List<String> releaseIdsWithSameLevel = new ArrayList<>();
         for (ReleaseLinkJSON subRelease : releaseLinkJSON.getReleaseLink()) {
+            if (releaseIdsWithSameLevel.contains(subRelease.getReleaseId())) {
+                continue;
+            }
+
+            releaseIdsWithSameLevel.add(subRelease.getReleaseId());
             ReleaseLinkJSON releaseByIndex = inputNetwork.get(listSubReleaseId.get(subRelease.getReleaseId()));
             ReleaseLinkJSON release = checkAndUpdateNode(releaseByIndex, operation, sw360User);
             if (!loadedReleaseIds.contains(subRelease.getReleaseId())) {
