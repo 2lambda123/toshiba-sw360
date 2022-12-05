@@ -1087,6 +1087,52 @@
                 });
             }
 
+            $("#checkDependency").click(async function() {
+                let currentNetwork = $('#releaseRelationTree').val();
+                let rowsWithDiff = await checkDiffDependencyNetworkAndReleaseRelationship('<%=PortalConstants.CHECK_DIFF_DEPENDENCY_NETWORK_WITH_RELEASES_RELATIONSHIP%>', currentNetwork);
+                resetBackgroundAndTextColor();
+                let rows = $("#LinkedReleasesNetwork").find('tr');
+                for (let indexOfRow of rowsWithDiff) {
+                    changeColorOfRow(rows[indexOfRow]);
+                }
+            });
+
+            function resetBackgroundAndTextColor() {
+                let columns = $("#LinkedReleasesNetwork tbody").find('td');
+                for (let col of columns) {
+                    $(col).css('background-color', 'white');
+                    $(col).css('color', 'black');
+                }
+            }
+
+            function changeColorOfRow(row) {
+                let columns = $(row).find('td');
+                for (let col of columns) {
+                    $(col).css('background-color', '#ffd4aa');
+                    $(col).css('color', 'red');
+                }
+            }
+
+            function checkDiffDependencyNetworkAndReleaseRelationship(what, currentNetwork){
+                return new Promise(function(resolve, reject) {
+                    jQuery.ajax({
+                        type: 'POST',
+                        url: '<%=viewReleaseURL%>',
+                        data: {
+                            '<portlet:namespace/><%=PortalConstants.WHAT%>': what,
+                            '<portlet:namespace/><%=PortalConstants.CURRENT_NETWORK%>': currentNetwork
+                        },
+                        success: function (data) {
+                            console.log(data);
+                            resolve(data.result);
+                        },
+                        error: function() {
+                            reject([]);
+                        }
+                    });
+                });
+            }
+
             function displayAlert(messages) {
                 for(let message of messages) {
                     $('.show-alert .alert-message').append(message);

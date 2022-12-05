@@ -688,6 +688,8 @@ public class PortalConstants {
     public static final String CYCLIC_LINKED_RELEASE_PATH = "cyclicLinkedReleasePath";
     public static final String CHILD_RELEASE_ID = "childReleaseId";
     public static final String RELEASES_WITH_SAME_COMPONENT_ID = "releaseWithSameComponentId";
+    public static final String CURRENT_NETWORK = "currentNetwork";
+    public static final String CHECK_DIFF_DEPENDENCY_NETWORK_WITH_RELEASES_RELATIONSHIP = "checkDiffDependencyNetworkWithReleasesRelationship";
     static {
         Properties props = CommonUtils.loadProperties(PortalConstants.class, PROPERTIES_FILE_PATH);
 

@@ -119,6 +119,9 @@
                         <div class="btn-group" role="group">
                             <button id="cancelEditButton" type="button" class="btn btn-light"><liferay-ui:message key="cancel" /></button>
                         </div>
+                        <div class="btn-group" role="group">
+                            <button id="checkDependency" type="button" class="btn btn-outline-success"><liferay-ui:message key="check.dependency.network" /></button>
+                        </div>
                         <div class="list-group-companion" data-belong-to="tab-Obligations">
                             <core_rt:if test="${not addMode and isProjectObligationsEnabled and isObligationPresent}">
                                 <div class="nav nav-pills justify-content-center bg-light font-weight-bold" id="pills-tab" role="tablist">

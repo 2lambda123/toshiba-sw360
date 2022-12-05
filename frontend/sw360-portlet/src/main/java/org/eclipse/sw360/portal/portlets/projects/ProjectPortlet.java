@@ -1263,6 +1263,9 @@ public class ProjectPortlet extends FossologyAwarePortlet {
         } else if (PortalConstants.RELEASES_WITH_SAME_COMPONENT_ID.equals(what)) {
             String releaseId = request.getParameter(PortalConstants.RELEASE_ID);
             serveReleasesWithSameComponent(request, response, releaseId);
+        } else if (PortalConstants.CHECK_DIFF_DEPENDENCY_NETWORK_WITH_RELEASES_RELATIONSHIP.equals(what)) {
+            String currentNetwork = request.getParameter(PortalConstants.CURRENT_NETWORK);
+            checkDiffDependencyNetworkAndReleasesRelationship(request, response, currentNetwork);
         }
     }
 
@@ -3387,6 +3390,67 @@ public class ProjectPortlet extends FossologyAwarePortlet {
             writeJSON(request, response, jsonObject);
         } catch (IOException e) {
             log.error(e.getMessage());
+        }
+    }
+
+    private void checkDiffDependencyNetworkAndReleasesRelationship(ResourceRequest request, ResourceResponse response, String currentNetwork) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        User user = UserCacheHolder.getUserFromRequest(request);
+        List<ReleaseLinkJSON> dependencyNetwork = new ArrayList<>();
+        List<Integer> rowsHaveDiff = new ArrayList<>();
+        List<String> checkedReleaseIds = new ArrayList<>();
+        if (currentNetwork != null) {
+            try {
+                dependencyNetwork = objectMapper.readValue(currentNetwork, new TypeReference<List<ReleaseLinkJSON>>() {
+                });
+            } catch (JsonProcessingException e) {
+                log.error("Error when parse string to object");
+            }
+        }
+
+        for (ReleaseLinkJSON releaseNode : dependencyNetwork) {
+            checkedReleaseIds.add(releaseNode.getReleaseId());
+            checkSubNodes(releaseNode, rowsHaveDiff, checkedReleaseIds, user);
+        }
+
+        JSONObject jsonObject = JSONFactoryUtil.createJSONObject();
+        jsonObject.put(PortalConstants.RESULT, rowsHaveDiff);
+        try {
+            writeJSON(request, response, jsonObject);
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void checkSubNodes(ReleaseLinkJSON releaseNode, List<Integer> rowsHaveDiff, List<String> checkedReleaseIds, User user) {
+        ComponentService.Iface releaseClient = thriftClients.makeComponentClient();
+        try {
+            Release releaseById = releaseClient.getReleaseById(releaseNode.getReleaseId(), user);
+            Map<String, ReleaseRelationship> linkedReleases = releaseById.getReleaseIdToRelationship();
+            List<String> releaseIdsInRelationShip = (linkedReleases != null) ? linkedReleases.keySet().stream().collect(Collectors.toList()) : Collections.emptyList();
+            if ((releaseNode.getReleaseLink() != null) && !releaseNode.getReleaseLink().isEmpty()) {
+                for (ReleaseLinkJSON subNode : releaseNode.getReleaseLink()) {
+                    checkedReleaseIds.add(subNode.getReleaseId());
+                    if (!releaseIdsInRelationShip.contains(subNode.getReleaseId())) {
+                        rowsHaveDiff.add(checkedReleaseIds.size());
+                        subNodesIsDiff(subNode, rowsHaveDiff, checkedReleaseIds);
+                    } else {
+                        checkSubNodes(subNode, rowsHaveDiff, checkedReleaseIds, user);
+                    }
+                }
+            }
+        } catch (TException e) {
+            log.error("Could not fetch release: " + releaseNode.getReleaseId(), e);
+        }
+    }
+
+    private void subNodesIsDiff(ReleaseLinkJSON releaseNode, List<Integer> rowsHaveDiff, List<String> checkedReleaseIds) {
+        if ((releaseNode.getReleaseLink() != null) && !releaseNode.getReleaseLink().isEmpty()) {
+            for (ReleaseLinkJSON subNode : releaseNode.getReleaseLink()) {
+                checkedReleaseIds.add(subNode.getReleaseId());
+                rowsHaveDiff.add(checkedReleaseIds.size());
+                subNodesIsDiff(subNode, rowsHaveDiff, checkedReleaseIds);
+            }
         }
     }
 }
