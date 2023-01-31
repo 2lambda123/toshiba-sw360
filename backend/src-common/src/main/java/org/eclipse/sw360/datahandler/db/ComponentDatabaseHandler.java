@@ -104,8 +104,8 @@ public class ComponentDatabaseHandler extends AttachmentAwareDatabaseHandler {
     private static final String ECC_AUTOSET_VALUE = "N";
     private static final String DEFAULT_CATEGORY = "Default_Category";
     private static final String ECC_FIELDS_VALUE_RESET = "";
-    private static final List<String> listComponentName =new ArrayList<>();
-    private static final Map<String ,String> mapReleaseName =new HashMap<>();
+    private static final List<String> listComponentName = new ArrayList<>();
+    private static final Map<String, String> mapReleaseName = new HashMap<>();
 
     /**
      * Connection to the couchDB database
@@ -562,7 +562,7 @@ public class ComponentDatabaseHandler extends AttachmentAwareDatabaseHandler {
     private void isDuplicateRelease(Map<String, String>  releases) {
         for (Map.Entry<String, String> release : releases.entrySet()) {
             if(!isDuplicate(release.getKey(), release.getValue()))
-                mapReleaseName.put(release.getKey(),release.getValue());
+                mapReleaseName.put(release.getKey(), release.getValue());
         }
     }
 
@@ -2564,20 +2564,20 @@ public class ComponentDatabaseHandler extends AttachmentAwareDatabaseHandler {
                     Map<String, String> releasesName = getReleasesName(importBomRequestPreparation.getReleasesName());
                     isDuplicateRelease(releasesName);
                     isDuplicateComponent(componentsName,true);
-                    if (listComponentName.size() == 0 && mapReleaseName.size() ==0){
+                    if (listComponentName.size() == 0 && mapReleaseName.size() == 0){
                         importBomRequestPreparation.setIsComponentDuplicate(true);
                         importBomRequestPreparation.setIsReleaseDuplicate(true);
                     }
                     else {
-                        String componentName ="";
-                        String releaseName="";
+                        String componentName = "";
+                        String releaseName = "";
                         if (listComponentName.isEmpty()){
-                            componentName ="Don't have Component created!";
+                            componentName = "Don't have Component created!";
                         } else {
                             componentName = listComponentName.stream().collect(Collectors.joining(" , "));
                         }
                         if (mapReleaseName.isEmpty()){
-                            releaseName ="Don't have Release created!";
+                            releaseName = "Don't have Release created!";
                         } else {
                             releaseName = mapReleaseName.keySet().stream().map(key -> key + " " + mapReleaseName.get(key)).collect(Collectors.joining(" , "));
                             releaseName = releaseName.substring(0, releaseName.length() - 2);
@@ -2773,19 +2773,19 @@ public class ComponentDatabaseHandler extends AttachmentAwareDatabaseHandler {
                 "component", url);
     }
 
-    public List<String> getComponentsName (String components){
+    public List<String> getComponentsName(String components) {
         components = components.substring(0, components.length() - 3);
         String[] parts = components.split(" , ");
         return Arrays.asList(parts);
     }
 
-    public Map<String, String> getReleasesName (String releases)  {
+    public Map<String, String> getReleasesName(String releases) {
         Map<String,String> releaseNames= new HashMap<>();
         releases = releases.replace(" , ", ",");
         String[] parts = releases.split(",");
         for (int i = 0; i < parts.length; i++) {
             String[] releaseName = parts[i].split(" ");
-            releaseNames.put(releaseName[0],releaseName[1]);
+            releaseNames.put(releaseName[0], releaseName[1]);
         }
         return releaseNames;
     }

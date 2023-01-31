@@ -312,7 +312,7 @@ public class ThriftEnumUtils {
             .put(DocumentType.PROJECT, "project")
             .put(DocumentType.LICENSE, "license")
             .put(DocumentType.USER, "user")
-            .put(DocumentType.SPDXDOCUMENT, "spdxDocument")
+            .put(DocumentType.SPDX_DOCUMENT, "spdxDocument")
             .put(DocumentType.SPDX_PACKAGE_INFO, "spdxPackageInfo")
             .put(DocumentType.SPDX_DOCUMENT_CREATION_INFO, "spdxDocumentCreation")
             .build();

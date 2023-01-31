@@ -623,7 +623,7 @@ public class ModerationDatabaseHandler {
 
     public RequestStatus createRequest(SPDXDocument spdx, User user, Boolean isDeleteRequest) {
         SPDXDocument dbSpdx;
-        try{
+        try {
             dbSpdx = spdxDocumentDatabaseHandler.getSPDXDocumentById(spdx.getId(), user);
         } catch (SW360Exception e) {
             log.error("Could not get original SPDX Document from database. Could not generate moderation request.", e);
@@ -634,7 +634,7 @@ public class ModerationDatabaseHandler {
         ModerationRequest request = createStubRequest(user, isDeleteRequest, spdx.getId(), moderators);
 
         // Set meta-data
-        request.setDocumentType(DocumentType.SPDXDOCUMENT);
+        request.setDocumentType(DocumentType.SPDX_DOCUMENT);
         request.setDocumentName(SW360Utils.printName(spdx));
 
         // Fill the request
@@ -646,7 +646,7 @@ public class ModerationDatabaseHandler {
 
     public RequestStatus createRequest(DocumentCreationInformation documentCreationInfo, User user, Boolean isDeleteRequest) {
         DocumentCreationInformation dbDocumentCreationInfo;
-        try{
+        try {
             dbDocumentCreationInfo = spdxDocumentCreationInfoDatabaseHandler.getDocumentCreationInformationById(documentCreationInfo.getId(), user);
         } catch (SW360Exception e) {
             log.error("Could not get original SPDX Document Creation Info from database. Could not generate moderation request.", e);
@@ -667,7 +667,7 @@ public class ModerationDatabaseHandler {
 
     public RequestStatus createRequest(PackageInformation packageInfo, User user, Boolean isDeleteRequest) {
         PackageInformation dbPackageInfo;
-        try{
+        try {
             dbPackageInfo = spdxPackageInfoDatabaseHandler.getPackageInformationById(packageInfo.getId(), user);
         } catch (SW360Exception e) {
             log.error("Could not get original SPDX Package Info from database. Could not generate moderation request.", e);

@@ -125,28 +125,28 @@ public class DisplayPackageInfoChanges extends UserAwareTag {
             return false;
         }
 
-        if (field == PackageInformation._Fields.CHECKSUMS){
+        if (field == PackageInformation._Fields.CHECKSUMS) {
             if (!deletions.isSet(field)) {
                 deletions.setFieldValue(field, new HashSet<>());
             }
             if (!additions.isSet(field)) {
                 additions.setFieldValue(field, new HashSet<>());
             }
-        } else if (field == PackageInformation._Fields.EXTERNAL_REFS){
+        } else if (field == PackageInformation._Fields.EXTERNAL_REFS) {
             if (!deletions.isSet(field)) {
                 deletions.setFieldValue(field, new HashSet<>());
             }
             if (!additions.isSet(field)) {
                 additions.setFieldValue(field, new HashSet<>());
             }
-        } else if (field == PackageInformation._Fields.ANNOTATIONS){
+        } else if (field == PackageInformation._Fields.ANNOTATIONS) {
             if (!deletions.isSet(field)) {
                 deletions.setFieldValue(field, new HashSet<>());
             }
             if (!additions.isSet(field)) {
                 additions.setFieldValue(field, new HashSet<>());
             }
-        } else if (field == PackageInformation._Fields.PACKAGE_VERIFICATION_CODE){
+        } else if (field == PackageInformation._Fields.PACKAGE_VERIFICATION_CODE) {
             if (!deletions.isSet(field)) {
                 deletions.setFieldValue(field, new HashSet<>());
             }
@@ -165,7 +165,7 @@ public class DisplayPackageInfoChanges extends UserAwareTag {
             return "";
         }
         StringBuilder display = new StringBuilder();
-        if (! actual.isSet(PackageInformation._Fields.CHECKSUMS)){
+        if (! actual.isSet(PackageInformation._Fields.CHECKSUMS)) {
             actual.checksums = new HashSet<>();
         }
 
@@ -222,7 +222,7 @@ public class DisplayPackageInfoChanges extends UserAwareTag {
             return "";
         }
         StringBuilder display = new StringBuilder();
-        if (! actual.isSet(PackageInformation._Fields.ANNOTATIONS)){
+        if (! actual.isSet(PackageInformation._Fields.ANNOTATIONS)) {
             actual.annotations = new HashSet<>();
         }
 
@@ -279,7 +279,7 @@ public class DisplayPackageInfoChanges extends UserAwareTag {
             return "";
         }
         StringBuilder display = new StringBuilder();
-        if (! actual.isSet(PackageInformation._Fields.EXTERNAL_REFS)){
+        if (! actual.isSet(PackageInformation._Fields.EXTERNAL_REFS)) {
             actual.externalRefs = new HashSet<>();
         }
 
@@ -336,7 +336,7 @@ public class DisplayPackageInfoChanges extends UserAwareTag {
             return "";
         }
         StringBuilder display = new StringBuilder();
-        if (! actual.isSet(PackageInformation._Fields.PACKAGE_VERIFICATION_CODE)){
+        if (! actual.isSet(PackageInformation._Fields.PACKAGE_VERIFICATION_CODE)) {
             actual.packageVerificationCode = new PackageVerificationCode();
         }
 

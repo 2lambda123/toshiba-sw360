@@ -606,7 +606,7 @@ public class ModerationPortlet extends FossologyAwarePortlet {
                 UserUtils.activateLiferayUser(request, moderationRequest.getUser());
             }
             break;
-            case SPDXDOCUMENT: {
+            case SPDX_DOCUMENT: {
                 SPDXDocumentService.Iface SpdxDocumentClient = thriftClients.makeSPDXClient();
                 if (moderationRequest.isRequestDocumentDelete()) {
                     SpdxDocumentClient.deleteSPDXDocument(moderationRequest.getDocumentId(), user);
@@ -812,7 +812,7 @@ public class ModerationPortlet extends FossologyAwarePortlet {
                     case USER:
                         renderUserModeration(request, response, moderationRequest, user);
                         break;
-                    case SPDXDOCUMENT:
+                    case SPDX_DOCUMENT:
                         renderSPDXDocumentModeration(request, response, moderationRequest, user);
                         break;
                     case SPDX_DOCUMENT_CREATION_INFO:
@@ -1061,7 +1061,7 @@ public class ModerationPortlet extends FossologyAwarePortlet {
         try {
             SPDXDocumentService.Iface client = thriftClients.makeSPDXClient();
             actual_SPDXDocuemnt = client.getSPDXDocumentForEdit(moderationRequest.getDocumentId(), user);
-            request.setAttribute(PortalConstants.ACTUAL_SPDXDOCUMENT, actual_SPDXDocuemnt);
+            request.setAttribute(PortalConstants.ACTUAL_SPDX_DOCUMENT, actual_SPDXDocuemnt);
         } catch (TException e) {
             log.error("Could not retrieve SPDX Document", e);
         }

@@ -13,6 +13,7 @@ package org.eclipse.sw360.moderation.db;
 import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformation;
 import org.eclipse.sw360.datahandler.thrift.moderation.ModerationRequest;
 import org.apache.thrift.protocol.TType;
+
 public class SpdxPackageInfoModerationRequestGenerator extends ModerationRequestGenerator<PackageInformation._Fields, PackageInformation> {
     @Override
     public ModerationRequest setAdditionsAndDeletions(ModerationRequest request, PackageInformation updatePackageInfo, PackageInformation actualPackageInfo){
@@ -26,15 +27,15 @@ public class SpdxPackageInfoModerationRequestGenerator extends ModerationRequest
         documentDeletions.setId(actualDocument.getId());
 
         for (PackageInformation._Fields field : PackageInformation._Fields.values()) {
-            if(PackageInformation.metaDataMap.get(field).valueMetaData.type == TType.BOOL &&
+            if (PackageInformation.metaDataMap.get(field).valueMetaData.type == TType.BOOL &&
                 actualDocument.getFieldValue(field) != updateDocument.getFieldValue(field)) {
                     documentAdditions.setFieldValue(field, updateDocument.getFieldValue(field));
                     documentDeletions.setFieldValue(field, actualDocument.getFieldValue(field));
-            } else if(actualDocument.getFieldValue(field) == null){
+            } else if (actualDocument.getFieldValue(field) == null) {
                     documentAdditions.setFieldValue(field, updateDocument.getFieldValue(field));
-            } else if (updateDocument.getFieldValue(field) == null){
+            } else if (updateDocument.getFieldValue(field) == null) {
                     documentDeletions.setFieldValue(field, actualDocument.getFieldValue(field));
-            } else if(!actualDocument.getFieldValue(field).equals(updateDocument.getFieldValue(field))) {
+            } else if (!actualDocument.getFieldValue(field).equals(updateDocument.getFieldValue(field))) {
                 switch (field) {
                     case PERMISSIONS:
                     case DOCUMENT_STATE:

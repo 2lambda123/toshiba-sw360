@@ -27,11 +27,11 @@ public class SpdxDocumentModerationRequestGenerator extends ModerationRequestGen
 
         for (SPDXDocument._Fields field : SPDXDocument._Fields.values()) {
 
-            if(actualSpdx.getFieldValue(field) == null){
+            if (actualSpdx.getFieldValue(field) == null) {
                     documentAdditions.setFieldValue(field, updateSpdx.getFieldValue(field));
-            } else if (updateSpdx.getFieldValue(field) == null){
+            } else if (updateSpdx.getFieldValue(field) == null) {
                     documentDeletions.setFieldValue(field, actualSpdx.getFieldValue(field));
-            } else if(!actualSpdx.getFieldValue(field).equals(updateSpdx.getFieldValue(field))) {
+            } else if (!actualSpdx.getFieldValue(field).equals(updateSpdx.getFieldValue(field))) {
                 switch (field) {
                     case PERMISSIONS:
                     case DOCUMENT_STATE:

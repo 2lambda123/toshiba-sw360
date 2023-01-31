@@ -279,8 +279,6 @@ public class ThriftValidate {
 }
 
     public static void prepareSpdxPackageInfo(PackageInformation packageInfo) throws SW360Exception {
-        // Check required fields
-
         // Check type
         packageInfo.setType(TYPE_SPDX_PACKAGE_INFO);
         // Unset temporary fields

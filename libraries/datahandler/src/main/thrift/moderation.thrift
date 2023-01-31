@@ -44,7 +44,7 @@ enum DocumentType {
     PROJECT = 3,
     LICENSE = 4,
     USER = 5,
-    SPDXDOCUMENT = 6,
+    SPDX_DOCUMENT = 6,
     SPDX_DOCUMENT_CREATION_INFO = 7,
     SPDX_PACKAGE_INFO = 8,
 }

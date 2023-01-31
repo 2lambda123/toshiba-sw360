@@ -119,14 +119,14 @@ public class DisplayDocumentCreationInfoChanges extends UserAwareTag {
             return false;
         }
 
-        if (field == DocumentCreationInformation._Fields.EXTERNAL_DOCUMENT_REFS){
+        if (field == DocumentCreationInformation._Fields.EXTERNAL_DOCUMENT_REFS) {
             if (!deletions.isSet(field)) {
                 deletions.setFieldValue(field, new HashSet<>());
             }
             if (!additions.isSet(field)) {
                 additions.setFieldValue(field, new HashSet<>());
             }
-        } else if (field == DocumentCreationInformation._Fields.CREATOR){
+        } else if (field == DocumentCreationInformation._Fields.CREATOR) {
             if (!deletions.isSet(field)) {
                 deletions.setFieldValue(field, new HashSet<>());
             }
@@ -144,7 +144,7 @@ public class DisplayDocumentCreationInfoChanges extends UserAwareTag {
             return "";
         }
         StringBuilder display = new StringBuilder();
-        if (! actual.isSet(DocumentCreationInformation._Fields.EXTERNAL_DOCUMENT_REFS)){
+        if (! actual.isSet(DocumentCreationInformation._Fields.EXTERNAL_DOCUMENT_REFS)) {
             actual.externalDocumentRefs = new HashSet<>();
         }
 
@@ -209,7 +209,7 @@ public class DisplayDocumentCreationInfoChanges extends UserAwareTag {
             return "";
         }
         StringBuilder display = new StringBuilder();
-        if (! actual.isSet(DocumentCreationInformation._Fields.CREATOR)){
+        if (! actual.isSet(DocumentCreationInformation._Fields.CREATOR)) {
             actual.creator = new HashSet<>();
         }
 

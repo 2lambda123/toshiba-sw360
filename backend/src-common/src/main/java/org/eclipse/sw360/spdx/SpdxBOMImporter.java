@@ -73,18 +73,18 @@ public class SpdxBOMImporter {
             requestPreparation.setMessage("error-read-file");
             return requestPreparation;
         }
-        String componentsName="";
-        String releasesName="";
-        String version="";
+        String componentsName = "";
+        String releasesName = "";
+        String version = "";
         List<SpdxPackage> listPackages = getPackages(spdxDocument);
-        for (SpdxPackage spdxPackage: listPackages){
-            componentsName += spdxPackage.getName() +" , ";
+        for (SpdxPackage spdxPackage : listPackages) {
+            componentsName += spdxPackage.getName() + " , ";
             if (!spdxPackage.getVersionInfo().toString().equals("Optional.empty"))
-                releasesName += spdxPackage.getName() + " " +spdxPackage.getVersionInfo() +" , ";
-            version += spdxPackage.getVersionInfo() +" , ";
+                releasesName += spdxPackage.getName() + " " + spdxPackage.getVersionInfo() + " , ";
+            version += spdxPackage.getVersionInfo() + " , ";
         }
-        componentsName = componentsName.replace("Optional[", "").replace("]","");
-        releasesName = releasesName.replace("Optional[", "").replace("]","");
+        componentsName = componentsName.replace("Optional[", "").replace("]", "");
+        releasesName = releasesName.replace("Optional[", "").replace("]", "");
         try {
             final List<SpdxElement> describedPackages = spdxDocument.getDocumentDescribes().stream().collect(Collectors.toList());
             final List<SpdxElement> packages =  describedPackages.stream()
@@ -255,7 +255,7 @@ public class SpdxBOMImporter {
     private Set<Annotations> createAnnotationsFromSpdxAnnotations(List<Annotation> spdxAnnotations) throws InvalidSPDXAnalysisException {
         Set<Annotations> annotations = new HashSet<>();
         int index = 0;
-        for(Annotation spdxAnn : spdxAnnotations) {
+        for (Annotation spdxAnn : spdxAnnotations) {
             String annotator = spdxAnn.getAnnotator();
             String date = spdxAnn.getAnnotationDate();
             String type = spdxAnn.getAnnotationType().name();
@@ -503,7 +503,7 @@ public class SpdxBOMImporter {
                     continue;
                 }
                 String type = data[0].trim();
-                String value = spdxCreator.substring(data[0].length()+1).trim();
+                String value = spdxCreator.substring(data[0].length() + 1).trim();
 
                 Creator creator = new Creator();
                 creator.setType(verifyOrSetDefault(type));
@@ -574,14 +574,14 @@ public class SpdxBOMImporter {
             final boolean fileAnalyzed = spdxPackage.isFilesAnalyzed();
             final String homepage = getValue(spdxPackage.getHomepage());
             final String sourceInfo = getValue(spdxPackage.getSourceInfo());
-            final String  primaryPackagePurpose =getValuePrimaryPurpose(spdxPackage.getPrimaryPurpose());
-            final String  releaseDate = getValue(spdxPackage.getReleaseDate());
-            final String  builtDate =getValue(spdxPackage.getBuiltDate());
-            final String  validUntilDate =getValue(spdxPackage.getValidUntilDate());
+            final String primaryPackagePurpose = getValuePrimaryPurpose(spdxPackage.getPrimaryPurpose());
+            final String releaseDate = getValue(spdxPackage.getReleaseDate());
+            final String builtDate = getValue(spdxPackage.getBuiltDate());
+            final String validUntilDate = getValue(spdxPackage.getValidUntilDate());
 
 
-            String licenseConcluded="";
-            if(spdxPackage.getLicenseConcluded() != null){
+            String licenseConcluded = "";
+            if (spdxPackage.getLicenseConcluded() != null) {
                 licenseConcluded = spdxPackage.getLicenseConcluded().toString();
             }
             final Set<String> licenseInfosFromFiles = spdxPackage.getLicenseInfoFromFiles().stream()
@@ -641,9 +641,9 @@ public class SpdxBOMImporter {
         try {
             PackageVerificationCode PVC = new PackageVerificationCode();
             Optional<SpdxPackageVerificationCode> spdxPVC = spdxPackage.getPackageVerificationCode();
-            String value="";
-            Set<String> excludedFileNames=new HashSet<>();
-            if(!spdxPVC.isEmpty()) {
+            String value = "";
+            Set<String> excludedFileNames = new HashSet<>();
+            if (!spdxPVC.isEmpty()) {
                 value = spdxPVC.get().getValue();
                 excludedFileNames = new HashSet<String>(Arrays.asList(verifyOrSetDefault(spdxPVC.get().getExcludedFileNames().toString())));
             }
@@ -711,7 +711,7 @@ public class SpdxBOMImporter {
 
     private String createLicenseDeclaredFromSpdxLicenseDeclared(SpdxPackage spdxPackage) {
         try {
-            if(!spdxPackage.getLicenseDeclared().equals(new SpdxNoAssertionLicense(spdxPackage.getModelStore(),spdxPackage.getDocumentUri()))) {
+            if (!spdxPackage.getLicenseDeclared().equals(new SpdxNoAssertionLicense(spdxPackage.getModelStore(), spdxPackage.getDocumentUri()))) {
                 return spdxPackage.getLicenseDeclared().toString();
             }
             return null;

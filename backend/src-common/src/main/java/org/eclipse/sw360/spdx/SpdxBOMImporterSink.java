@@ -78,7 +78,7 @@ public class SpdxBOMImporterSink {
                 user);
 
         final String releaseId = addDocumentRequestSummary.getId();
-        if(releaseId == null || releaseId.isEmpty()) {
+        if (releaseId == null || releaseId.isEmpty()) {
             throw new SW360Exception("Id of added release should not be empty. " + addDocumentRequestSummary.toString());
         }
         return new Response(releaseId, AddDocumentRequestStatus.SUCCESS.equals(addDocumentRequestSummary.getRequestStatus()));
@@ -97,7 +97,7 @@ public class SpdxBOMImporterSink {
             spdxDocId = addDocumentRequestSummary.getId();
         }
 
-        if(spdxDocId == null || spdxDocId.isEmpty()) {
+        if (spdxDocId == null || spdxDocId.isEmpty()) {
             throw new SW360Exception("Id of spdx document should not be empty. " + requestStatus.toString());
         }
         return new Response(spdxDocId, RequestStatus.SUCCESS.equals(requestStatus));
@@ -116,7 +116,7 @@ public class SpdxBOMImporterSink {
             docCreationInfoId = addDocumentRequestSummary.getId();
         }
 
-        if(docCreationInfoId == null || docCreationInfoId.isEmpty()) {
+        if (docCreationInfoId == null || docCreationInfoId.isEmpty()) {
             throw new SW360Exception("Id of added document creation information should not be empty. " + requestStatus.toString());
         }
         return new Response(docCreationInfoId, RequestStatus.SUCCESS.equals(requestStatus));
@@ -148,7 +148,7 @@ public class SpdxBOMImporterSink {
         }
 
         final Set<Attachment> attachments = project.getAttachments();
-        if(attachments != null && attachments.size() > 0) {
+        if (attachments != null && attachments.size() > 0) {
             project.setAttachments(attachments.stream()
                     .map(a -> a.setCreatedBy(user.getEmail()))
                     .collect(Collectors.toSet()));
@@ -157,7 +157,7 @@ public class SpdxBOMImporterSink {
                 user);
 
         final String projectId = addDocumentRequestSummary.getId();
-        if(projectId == null || projectId.isEmpty()) {
+        if (projectId == null || projectId.isEmpty()) {
             throw new SW360Exception("Id of added project should not be empty. " + addDocumentRequestSummary.toString());
         }
         return new Response(projectId, AddDocumentRequestStatus.SUCCESS.equals(addDocumentRequestSummary.getRequestStatus()));

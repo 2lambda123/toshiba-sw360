@@ -70,7 +70,7 @@ public class SpdxPackageInfoModerator extends Moderator<PackageInformation._Fiel
                                                       PackageInformation packageInfoAdditions,
                                                       PackageInformation packageInfoDeletions) {
         for (PackageInformation._Fields field : PackageInformation._Fields.values()) {
-            if(packageInfoAdditions.getFieldValue(field) == null && packageInfoDeletions.getFieldValue(field) == null){
+            if (packageInfoAdditions.getFieldValue(field) == null && packageInfoDeletions.getFieldValue(field) == null) {
                 continue;
             }
             switch (field) {

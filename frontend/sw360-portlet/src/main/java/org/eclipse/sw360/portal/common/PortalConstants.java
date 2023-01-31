@@ -726,13 +726,13 @@ public class PortalConstants {
     public static final boolean IS_SVM_ENABLED;
 
     //! Specialized keys for SPDX
-    public static final String SPDXDOCUMENT = "spdxDocument";
+    public static final String SPDX_DOCUMENT = "spdxDocument";
     public static final String SPDX_DOCUMENT_CREATION_INFO = "spdxDocumentCreationInfo";
     public static final String SPDX_PACKAGE_INFO = "spdxPackageInfo";
     public static final String SPDX_DOCUMENT_ID = "spdxDocumentId";
     public static final String SPDX_DOCUMENT_CREATION_INFO_ID = "spdxDocumentCreationInfoId";
     public static final String SPDX_PACKAGE_INFO_ID = "spdxPackageInfoId";
-    public static final String ACTUAL_SPDXDOCUMENT = "actual_SPDXDocument";
+    public static final String ACTUAL_SPDX_DOCUMENT = "actual_SPDXDocument";
     public static final String ACTUAL_DOCUMENT_CREATION_INFO = "actual_DocumentCreationInfo";
     public static final String ACTUAL_PACKAGE_INFO = "actual_PackageInfo";
     public static final Set<String> SET_RELATIONSHIP_TYPE;

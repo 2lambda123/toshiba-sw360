@@ -172,7 +172,6 @@ define('components/includes/releases/validateLib', ['jquery'], function ($) {
 
     function validateElement(element) {
         var errors = [];
-        // var elementRule = $(element).attr('rule');
         if (typeof $(element).attr('rule') === 'undefined' || $(element).attr('rule').length == 0) {
             return errors;
         }

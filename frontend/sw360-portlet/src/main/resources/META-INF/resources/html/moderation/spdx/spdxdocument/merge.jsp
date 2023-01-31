@@ -26,7 +26,7 @@
 
 <core_rt:set var="spdxDocument" value="${actual_SPDXDocument}" scope="request"/>
 
-<div class="container" id="moderation-request-merge" data-document-type="<%=DocumentType.SPDXDOCUMENT%>">
+<div class="container" id="moderation-request-merge" data-document-type="<%=DocumentType.SPDX_DOCUMENT%>">
 
     <core_rt:set var="moderationTitle" value="Change ${sw360:printSPDXDocumentName(spdxDocument)}" scope="request" />
     <%@include file="/html/moderation/includes/moderationHeader.jspf"%>

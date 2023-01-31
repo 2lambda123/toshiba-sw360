@@ -26,11 +26,11 @@ public class SpdxDocumentCreationInfoModerationRequestGenerator extends Moderati
         documentDeletions.setId(actualDocument.getId());
         for (DocumentCreationInformation._Fields field : DocumentCreationInformation._Fields.values()) {
 
-            if(actualDocument.getFieldValue(field) == null){
+            if (actualDocument.getFieldValue(field) == null) {
                     documentAdditions.setFieldValue(field, updateDocument.getFieldValue(field));
-            } else if (updateDocument.getFieldValue(field) == null){
+            } else if (updateDocument.getFieldValue(field) == null) {
                     documentDeletions.setFieldValue(field, actualDocument.getFieldValue(field));
-            } else if(!actualDocument.getFieldValue(field).equals(updateDocument.getFieldValue(field))) {
+            } else if (!actualDocument.getFieldValue(field).equals(updateDocument.getFieldValue(field))) {
                 switch (field) {
                     case PERMISSIONS:
                     case DOCUMENT_STATE:

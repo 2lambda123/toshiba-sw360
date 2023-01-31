@@ -1077,7 +1077,7 @@ public class ComponentPortlet extends FossologyAwarePortlet {
             request.setAttribute(IS_USER_AT_LEAST_ECC_ADMIN, PermissionUtils.isUserAtLeast(UserGroup.ECC_ADMIN, user)
                     || PermissionUtils.isUserAtLeastDesiredRoleInSecondaryGroup(UserGroup.ECC_ADMIN, allSecRoles) ? "Yes" : "No");
             
-            request.setAttribute(SPDXDOCUMENT, spdxDocument);
+            request.setAttribute(SPDX_DOCUMENT, spdxDocument);
             request.setAttribute(SPDX_DOCUMENT_CREATION_INFO, documentCreationInfo);
             request.setAttribute(SPDX_PACKAGE_INFO, packageInfos);
 
@@ -1850,7 +1850,7 @@ public class ComponentPortlet extends FossologyAwarePortlet {
                         packageInfos.add(packageInfo);
                     }
                 }
-                request.setAttribute(SPDXDOCUMENT, spdxDocument);
+                request.setAttribute(SPDX_DOCUMENT, spdxDocument);
                 request.setAttribute(SPDX_DOCUMENT_CREATION_INFO, documentCreationInfo);
                 request.setAttribute(SPDX_PACKAGE_INFO, packageInfos);
             }

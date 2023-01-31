@@ -94,7 +94,7 @@ public class SpdxPackageInfoDatabaseHandler {
             final String email = user.getEmail();
             Optional<ModerationRequest> moderationRequestOptional = CommonUtils.getFirstModerationRequestOfUser(moderationRequestsForDocumentId, email);
             if (moderationRequestOptional.isPresent()
-                    && isInProgressOrPending(moderationRequestOptional.get())){
+                    && isInProgressOrPending(moderationRequestOptional.get())) {
                 ModerationRequest moderationRequest = moderationRequestOptional.get();
                 packageInfo = moderator.updateSpdxPackageInfoFromModerationRequest(packageInfo, moderationRequest.getPackageInfoAdditions(), moderationRequest.getPackageInfoDeletions());
                 documentState = CommonUtils.getModeratedDocumentState(moderationRequest);
@@ -230,7 +230,7 @@ public class SpdxPackageInfoDatabaseHandler {
     private boolean isChanged(PackageInformation actual, PackageInformation update) {
 
         for (PackageInformation._Fields field : PackageInformation._Fields.values()) {
-            if(update.getFieldValue(field) == null) {
+            if (update.getFieldValue(field) == null) {
                 continue;
             } else if (actual.getFieldValue(field) == null) {
                 return true;

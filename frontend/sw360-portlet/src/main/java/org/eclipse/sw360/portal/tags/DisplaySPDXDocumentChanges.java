@@ -130,28 +130,28 @@ public class DisplaySPDXDocumentChanges extends UserAwareTag {
             return false;
         }
 
-        if (field == SPDXDocument._Fields.SNIPPETS){
+        if (field == SPDXDocument._Fields.SNIPPETS) {
             if (!deletions.isSet(field)) {
                 deletions.setFieldValue(field, new HashSet<>());
             }
             if (!additions.isSet(field)) {
                 additions.setFieldValue(field, new HashSet<>());
             }
-        } else if (field == SPDXDocument._Fields.RELATIONSHIPS){
+        } else if (field == SPDXDocument._Fields.RELATIONSHIPS) {
             if (!deletions.isSet(field)) {
                 deletions.setFieldValue(field, new HashSet<>());
             }
             if (!additions.isSet(field)) {
                 additions.setFieldValue(field, new HashSet<>());
             }
-        } else if (field == SPDXDocument._Fields.ANNOTATIONS){
+        } else if (field == SPDXDocument._Fields.ANNOTATIONS) {
             if (!deletions.isSet(field)) {
                 deletions.setFieldValue(field, new HashSet<>());
             }
             if (!additions.isSet(field)) {
                 additions.setFieldValue(field, new HashSet<>());
             }
-        } else if (field == SPDXDocument._Fields.OTHER_LICENSING_INFORMATION_DETECTEDS){
+        } else if (field == SPDXDocument._Fields.OTHER_LICENSING_INFORMATION_DETECTEDS) {
             if (!deletions.isSet(field)) {
                 deletions.setFieldValue(field, new HashSet<>());
             }
@@ -169,7 +169,7 @@ public class DisplaySPDXDocumentChanges extends UserAwareTag {
             return "";
         }
         StringBuilder display = new StringBuilder();
-        if (! actual.isSet(SPDXDocument._Fields.SNIPPETS)){
+        if (! actual.isSet(SPDXDocument._Fields.SNIPPETS)) {
             actual.snippets = new HashSet<>();
         }
 
@@ -234,7 +234,7 @@ public class DisplaySPDXDocumentChanges extends UserAwareTag {
             return "";
         }
         StringBuilder display = new StringBuilder();
-        if (! actual.isSet(SPDXDocument._Fields.RELATIONSHIPS)){
+        if (! actual.isSet(SPDXDocument._Fields.RELATIONSHIPS)) {
             actual.relationships = new HashSet<>();
         }
 
@@ -292,7 +292,7 @@ public class DisplaySPDXDocumentChanges extends UserAwareTag {
             return "";
         }
         StringBuilder display = new StringBuilder();
-        if (! actual.isSet(SPDXDocument._Fields.ANNOTATIONS)){
+        if (! actual.isSet(SPDXDocument._Fields.ANNOTATIONS)) {
             actual.annotations = new HashSet<>();
         }
 
@@ -349,7 +349,7 @@ public class DisplaySPDXDocumentChanges extends UserAwareTag {
             return "";
         }
         StringBuilder display = new StringBuilder();
-        if (! actual.isSet(SPDXDocument._Fields.OTHER_LICENSING_INFORMATION_DETECTEDS)){
+        if (! actual.isSet(SPDXDocument._Fields.OTHER_LICENSING_INFORMATION_DETECTEDS)) {
             actual.otherLicensingInformationDetecteds = new HashSet<>();
         }
 
@@ -403,13 +403,13 @@ public class DisplaySPDXDocumentChanges extends UserAwareTag {
     private String renderSnippetRange(SnippetInformation actual, SnippetInformation additions, SnippetInformation deletions) {
         StringBuilder display = new StringBuilder();
         display.append("<tr><td>snippetRange:</td></tr>");
-        if (! actual.isSet(SnippetInformation._Fields.SNIPPET_RANGES)){
+        if (! actual.isSet(SnippetInformation._Fields.SNIPPET_RANGES)) {
             actual.snippetRanges = new HashSet<>();
         }
-        if (! additions.isSet(SnippetInformation._Fields.SNIPPET_RANGES)){
+        if (! additions.isSet(SnippetInformation._Fields.SNIPPET_RANGES)) {
             additions.snippetRanges = new HashSet<>();
         }
-        if (! deletions.isSet(SnippetInformation._Fields.SNIPPET_RANGES)){
+        if (! deletions.isSet(SnippetInformation._Fields.SNIPPET_RANGES)) {
             deletions.snippetRanges = new HashSet<>();
         }
         if (additions.snippetRanges.isEmpty() && deletions.snippetRanges.isEmpty()) {

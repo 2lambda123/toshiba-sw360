@@ -106,7 +106,7 @@ public class SpdxDocumentDatabaseHandler {
             final String email = user.getEmail();
             Optional<ModerationRequest> moderationRequestOptional = CommonUtils.getFirstModerationRequestOfUser(moderationRequestsForDocumentId, email);
             if (moderationRequestOptional.isPresent()
-                    && isInProgressOrPending(moderationRequestOptional.get())){
+                    && isInProgressOrPending(moderationRequestOptional.get())) {
                 ModerationRequest moderationRequest = moderationRequestOptional.get();
                 spdx = moderator.updateSPDXDocumentFromModerationRequest(spdx, moderationRequest.getSPDXDocumentAdditions(), moderationRequest.getSPDXDocumentDeletions());
                 documentState = CommonUtils.getModeratedDocumentState(moderationRequest);
@@ -201,24 +201,24 @@ public class SpdxDocumentDatabaseHandler {
             Release oldRelease = release.deepCopy();
             release.unsetSpdxId();
             releaseRepository.update(release);
-            dbHandlerUtil.addChangeLogs(release, oldRelease, user.getEmail(), Operation.UPDATE, null, Lists.newArrayList(), spdx.getId(), Operation.SPDXDOCUMENT_DELETE);
+            dbHandlerUtil.addChangeLogs(release, oldRelease, user.getEmail(), Operation.UPDATE, null, Lists.newArrayList(), spdx.getId(), Operation.SPDX_DOCUMENT_DELETE);
         }
         return RequestStatus.SUCCESS;
     }
 
     private boolean isChanged(SPDXDocument actual, SPDXDocument update) {
 
-            for (SPDXDocument._Fields field : SPDXDocument._Fields.values()) {
-                if(update.getFieldValue(field) == null) {
-                    continue;
-                } else if (actual.getFieldValue(field) == null) {
-                    return true;
-                } else if (!actual.getFieldValue(field).equals(update.getFieldValue(field))) {
-                    return true;
-                }
+        for (SPDXDocument._Fields field : SPDXDocument._Fields.values()) {
+            if (update.getFieldValue(field) == null) {
+                continue;
+            } else if (actual.getFieldValue(field) == null) {
+                return true;
+            } else if (!actual.getFieldValue(field).equals(update.getFieldValue(field))) {
+                return true;
             }
-
-            return false;
         }
+
+        return false;
+    }
 
 }
