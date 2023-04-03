@@ -13,6 +13,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.thrift.TException;
 import org.eclipse.sw360.datahandler.common.CommonUtils;
+import org.eclipse.sw360.datahandler.common.SW360Constants;
 import org.eclipse.sw360.datahandler.common.SW360Utils;
 import org.eclipse.sw360.datahandler.common.ThriftEnumUtils;
 import org.eclipse.sw360.datahandler.thrift.MainlineState;
@@ -43,6 +44,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Arrays;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -95,9 +97,19 @@ public abstract class LinkedReleasesAndProjectsAwarePortlet extends AttachmentAw
         if (PortalConstants.LOAD_LINKED_PROJECTS_ROWS.equals(action)) {
             boolean overrideToRelease = Boolean.parseBoolean(request.getParameter("overrideToRelease"));
             if (overrideToRelease) {
-                loadLinkedReleasesRows(request, response);
-                include("/html/utils/ajax/linkedReleasesClearingStatusRows.jsp", request, response,
-                        PortletRequest.RESOURCE_PHASE);
+                if (!SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
+                    loadLinkedReleasesRows(request, response);
+                    include("/html/utils/ajax/linkedReleasesClearingStatusRows.jsp", request, response,
+                            PortletRequest.RESOURCE_PHASE);
+                } else {
+                    try {
+                        loadLinkedReleaseOfProject(request);
+                        include("/html/utils/ajax/linkedReleaseInNetworkRows.jsp", request, response,
+                                PortletRequest.RESOURCE_PHASE);
+                    } catch (TException e) {
+                        log.error("Error when create new release row for tree view");
+                    }
+                }
                 return;
             }
             serveLoadLinkedProjectsRows(request, response);
@@ -177,7 +189,12 @@ public abstract class LinkedReleasesAndProjectsAwarePortlet extends AttachmentAw
     }
 
     protected void putDirectlyLinkedProjectsInRequest(PortletRequest request, Project project, User user) {
-        final Collection<ProjectLink> linkedProjects = SW360Utils.getLinkedProjects(project, false, thriftClients, log, user);
+        Collection<ProjectLink> linkedProjects;
+        if (!SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
+            linkedProjects = SW360Utils.getLinkedProjects(project, false, thriftClients, log, user);
+        } else {
+            linkedProjects = SW360Utils.getLinkedProjectWithoutReleases(project, false, thriftClients, log, user);
+        }
         List<ProjectLink> secondLevelLinks = linkedProjects
                 .stream()
                 .map(ProjectLink::getSubprojects)
@@ -200,8 +217,13 @@ public abstract class LinkedReleasesAndProjectsAwarePortlet extends AttachmentAw
     }
 
     protected void serveLoadLinkedProjectsRows(ResourceRequest request, ResourceResponse response) throws PortletException, IOException {
-        prepareLinkedProjects(request);
-        include("/html/utils/ajax/linkedProjectsRows.jsp", request, response, PortletRequest.RESOURCE_PHASE);
+        if (!SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
+            prepareLinkedProjects(request);
+            include("/html/utils/ajax/linkedProjectsRows.jsp", request, response, PortletRequest.RESOURCE_PHASE);
+        } else {
+            prepareLinkedProjectDependencyNetwork(request);
+            include("/html/utils/ajax/linkedProjectRowsDependencyNetwork.jsp", request, response, PortletRequest.RESOURCE_PHASE);
+        }
     }
 
     protected void prepareLinkedProjects(ResourceRequest request) throws PortletException {
@@ -299,5 +321,61 @@ public abstract class LinkedReleasesAndProjectsAwarePortlet extends AttachmentAw
             relMainLineState.put(releaseId, ThriftEnumUtils.enumToString(releaseMainlineState));
         }));
         return relMainLineState;
+    }
+
+    protected void loadLinkedReleaseOfProject(ResourceRequest request) throws TException {
+        String projectId = request.getParameter("projectId");
+        String[] trace = request.getParameterValues("trace[]");
+        String branchId = request.getParameter(PortalConstants.NETWORK_PARENT_BRANCH_ID);
+        final User user = UserCacheHolder.getUserFromRequest(request);
+        try {
+            ProjectService.Iface projectClient = thriftClients.makeProjectClient();
+            List<ReleaseLink> linkedReleases = projectClient.getReleaseLinksOfProjectNetWorkByTrace(projectId, Arrays.asList(trace), user);
+            request.setAttribute(PortalConstants.NETWORK_PARENT_BRANCH_ID, branchId);
+            request.setAttribute(PortalConstants.PARENT_SCOPE_GROUP_ID, request.getParameter(PortalConstants.PARENT_SCOPE_GROUP_ID));
+            request.setAttribute(PortalConstants.NETWORK_RELEASE_LIST, linkedReleases);
+            int totalInaccessibleRow = 0;
+            for (ReleaseLink link : linkedReleases) {
+                if (!link.isAccessible()) {
+                    totalInaccessibleRow++;
+                }
+            }
+            request.setAttribute(PortalConstants.NETWORK_TOTAL_INACCESSIBLE_ROWS, totalInaccessibleRow);
+        } catch (TException e) {
+            log.error("Error getting releases!", e);
+            request.setAttribute(PortalConstants.NETWORK_PARENT_BRANCH_ID, branchId);
+            request.setAttribute(PortalConstants.PARENT_SCOPE_GROUP_ID, request.getParameter(PortalConstants.PARENT_SCOPE_GROUP_ID));
+            request.setAttribute(PortalConstants.NETWORK_RELEASE_LIST, Collections.emptyList());
+            request.setAttribute(PortalConstants.NETWORK_TOTAL_INACCESSIBLE_ROWS, 0);
+        }
+    }
+
+    protected void prepareLinkedProjectDependencyNetwork(ResourceRequest request) throws PortletException {
+        final User user = UserCacheHolder.getUserFromRequest(request);
+        String branchId = request.getParameter(PortalConstants.NETWORK_PARENT_BRANCH_ID);
+        Optional<String> projectIdOpt = getProjectIdFromBranchId(branchId);
+        request.setAttribute(PortalConstants.NETWORK_PARENT_BRANCH_ID, branchId);
+        final Project project;
+        if (projectIdOpt.isPresent()) {
+            try {
+                ProjectService.Iface client = thriftClients.makeProjectClient();
+                project = client.getProjectById(projectIdOpt.get(), user);
+            } catch (TException e) {
+                log.error("Error getting projects!", e);
+                throw new PortletException("cannot load project " + projectIdOpt.get(), e);
+            }
+            String parentProjectPath = request.getParameter(PortalConstants.PARENT_PROJECT_PATH);
+            if (parentProjectPath != null) {
+                request.setAttribute(PortalConstants.PARENT_PROJECT_PATH,
+                        parentProjectPath.concat(":").concat(projectIdOpt.get()));
+            }
+        } else {
+            project = new Project();
+        }
+        List<ProjectLink> mappedProjectLinks = createLinkedProjects(project, user);
+
+        mappedProjectLinks = sortProjectLink(mappedProjectLinks);
+        request.setAttribute(PROJECT_LIST, mappedProjectLinks);
+        request.setAttribute(PortalConstants.PARENT_SCOPE_GROUP_ID, request.getParameter(PortalConstants.PARENT_SCOPE_GROUP_ID));
     }
 }

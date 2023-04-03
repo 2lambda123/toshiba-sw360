@@ -77,6 +77,8 @@ public class SW360Constants {
     public static final String TYPE_SPDX_DOCUMENT = "SPDXDocument";
     public static final String TYPE_SPDX_DOCUMENT_CREATION_INFO = "documentCreationInformation";
     public static final String TYPE_SPDX_PACKAGE_INFO = "packageInformation";
+    public static final String PLEASE_ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP = "Please enable flexible project " +
+            "release relationship configuration to use this function (enable.flexible.project.release.relationship = true)";
 
     public static final String SVM_COMPONENT_ID;
     public static final String SVM_MONITORINGLIST_ID;
@@ -86,6 +88,7 @@ public class SW360Constants {
     public static final String SVM_SHORT_STATUS;
     public static final String SVM_SHORT_STATUS_KEY;
     public static final String SVM_SCHEDULER_EMAIL;
+    public static final boolean ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP;
 
     /**
      * Hashmap containing the name field for each type.
@@ -178,6 +181,8 @@ public class SW360Constants {
         SVM_SCHEDULER_EMAIL = props.getProperty("svm.scheduler.email", "");
         SVM_MONITORINGLIST_ID = props.getProperty("svm.monitoringlist.id", "");
         SPDX_DOCUMENT_ENABLED = Boolean.parseBoolean(props.getProperty("spdx.document.enabled", "false"));
+        ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP = Boolean.parseBoolean(
+                System.getProperty("RunTestFlexibleRelationship", props.getProperty("enable.flexible.project.release.relationship", "false")));
     }
 
     private static Map.Entry<String, String> pair(TFieldIdEnum field, String displayName){
