@@ -294,6 +294,10 @@ public class ProjectPortlet extends FossologyAwarePortlet {
             serveAddVendor(request, response);
         } else if (VIEW_DEPARTMENT.equals(action)) {
             serveViewDepartment(request, response);
+        } else if (DEPENDENCY_NETWORK_LIST.equals(action)) {
+            serveDependencyNetworkList(request, response);
+        } else if (PortalConstants.DEPENDENCY_NETWORK_ON_LOAD.equals(action)) {
+            serveDependencyNetworkOnLoad(request, response);
         }
     }
 
@@ -1452,6 +1456,7 @@ public class ProjectPortlet extends FossologyAwarePortlet {
         String pageName = request.getParameter(PAGENAME);
         if (PAGENAME_DETAIL.equals(pageName)) {
             prepareDetailView(request, response);
+            request.setAttribute(IS_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP_ENABLED, SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP);
             include("/html/projects/detail.jsp", request, response);
         } else if (PAGENAME_EDIT.equals(pageName)) {
             prepareProjectEdit(request);
@@ -3281,5 +3286,50 @@ public class ProjectPortlet extends FossologyAwarePortlet {
             }
         }
         return businessUnit;
+    }
+
+    private void serveDependencyNetworkList(ResourceRequest request, ResourceResponse response) {
+        ProjectService.Iface client = thriftClients.makeProjectClient();
+        User user = UserCacheHolder.getUserFromRequest(request);
+        String projectId = request.getParameter(DOCUMENT_ID);
+        List<Map<String, String>> clearingStatusList = new ArrayList<Map<String, String>>();
+        try {
+            clearingStatusList = client.getAccessibleDependencyNetworkForListView(projectId, user);
+        } catch (TException e) {
+            log.error("Problem getting flat view of Clearing Status", e);
+        }
+        JSONArray clearingStatusData = createJSONArray();
+        for (int i = 0; i < clearingStatusList.size(); i++) {
+            JSONObject jsonObject = JSONFactoryUtil.createJSONObject();
+            clearingStatusList.get(i).entrySet().stream()
+                    .forEach(entry -> jsonObject.put(entry.getKey(), entry.getValue()));
+            clearingStatusData.put(jsonObject);
+        }
+        JSONObject jsonResult = createJSONObject();
+        jsonResult.put("data", clearingStatusData);
+        try {
+            writeJSON(request, response, jsonResult);
+        } catch (IOException e) {
+            log.error("Problem rendering Clearing Status", e);
+        }
+    }
+
+    private void serveDependencyNetworkOnLoad(ResourceRequest request, ResourceResponse response)
+            throws IOException, PortletException {
+        User user = UserCacheHolder.getUserFromRequest(request);
+        String id = request.getParameter(PROJECT_ID);
+        ProjectService.Iface client = thriftClients.makeProjectClient();
+        Project project = null;
+        try {
+            project = client.getProjectById(id, user);
+        } catch (TException exp) {
+            log.error("Error while fetching Project id : " + id, exp);
+            return;
+        }
+
+        List<ProjectLink> mappedProjectLinks = createLinkedProjects(project, user);
+        mappedProjectLinks = sortProjectLink(mappedProjectLinks);
+        request.setAttribute(PROJECT_LIST, mappedProjectLinks);
+        include("/html/utils/ajax/linkedProjectRowsDependencyNetwork.jsp", request, response, PortletRequest.RESOURCE_PHASE);
     }
 }

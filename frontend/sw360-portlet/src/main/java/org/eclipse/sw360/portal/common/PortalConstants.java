@@ -727,7 +727,12 @@ public class PortalConstants {
     public static final boolean IS_COMPONENT_VISIBILITY_RESTRICTION_ENABLED;
     
     public static final boolean IS_SVM_ENABLED;
-
+    public static final String IS_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP_ENABLED = "isFlexibleProjectReleaseRelationshipEnabled";
+    public static final String NETWORK_PARENT_BRANCH_ID = "networkParentBranchId";
+    public static final String NETWORK_RELEASE_LIST = "networkReleaseList";
+    public static final String NETWORK_TOTAL_INACCESSIBLE_ROWS = "netWorkTotalInAccessibleRow";
+    public static final String DEPENDENCY_NETWORK_LIST = "dependencyNetworkList";
+    public static final String DEPENDENCY_NETWORK_ON_LOAD = "dependencyNetworkOnLoad";
     static {
         Properties props = CommonUtils.loadProperties(PortalConstants.class, PROPERTIES_FILE_PATH);
 
