@@ -11,6 +11,8 @@ package org.eclipse.sw360.datahandler.common;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
@@ -766,5 +768,39 @@ public class SW360Utils {
         } catch (TException e) {
             log.error(e.getMessage());
         }
+    }
+
+    public static Set<String> getReleaseIdsLinkedWithProject(Project project) {
+        Set<String> releasesIds = new HashSet<>();
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+        List<ReleaseNode> releaseLinkJSONS = new ArrayList<>();
+        if (project.getReleaseRelationNetwork() != null) {
+            try {
+                releaseLinkJSONS = objectMapper.readValue(project.getReleaseRelationNetwork(), new TypeReference<List<ReleaseNode>>() {
+                });
+                for (ReleaseNode release : releaseLinkJSONS) {
+                    releasesIds.addAll(flattenReleaseIdInNetwork(release));
+                }
+            } catch (JsonProcessingException e) {
+                log.error(e.getMessage());
+            }
+        }
+
+        return releasesIds;
+    }
+
+    private static Set<String> flattenReleaseIdInNetwork(ReleaseNode node) {
+        Set<String> setReleaseIds = new HashSet<>();
+        setReleaseIds.add(node.getReleaseId());
+        List<ReleaseNode> children = node.getReleaseLink();
+        if (!CommonUtils.isNullOrEmptyCollection(children)) {
+            for (ReleaseNode child : children) {
+                setReleaseIds.addAll(flattenReleaseIdInNetwork(child));
+            }
+        }
+
+        return setReleaseIds;
     }
 }

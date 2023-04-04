@@ -79,6 +79,7 @@
 
 <core_rt:set var="isObligationPresent" value="${not empty project.releaseIdToUsage}" />
 <core_rt:set var="isProjectObligationsEnabled"  value="${isProjectObligationsEnabled and hasWritePermissions}" />
+<core_rt:set var="enableSearchForReleasesFromLinkedProjects" value="${true}" scope="request"/>
 
 <div class="container" style="display: none;">
     <div class="row">
@@ -121,6 +122,11 @@
                         <div class="btn-group" role="group">
                             <button id="cancelEditButton" type="button" class="btn btn-light"><liferay-ui:message key="cancel" /></button>
                         </div>
+                        <core_rt:if test="${isFlexibleProjectReleaseRelationshipEnabled}">
+                            <div class="btn-group" role="group">
+                                <button id="checkDependency" type="button" class="btn btn-outline-success"><liferay-ui:message key="check.dependency.network" /></button>
+                            </div>
+                        </core_rt:if>
                         <div class="list-group-companion" data-belong-to="tab-Obligations">
                             <core_rt:if test="${not addMode and isProjectObligationsEnabled and isObligationPresent}">
                                 <div class="nav nav-pills justify-content-center bg-light font-weight-bold" id="pills-tab" role="tablist">
@@ -166,7 +172,12 @@
                             </div>
                             <div id="tab-linkedProjects" class="tab-pane <core_rt:if test="${selectedTab == 'tab-linkedProjects'}">active show</core_rt:if>">
                                 <%@include file="/html/projects/includes/linkedProjectsEdit.jspf" %>
-                                <%@include file="/html/utils/includes/linkedReleasesEdit.jspf" %>
+                                <core_rt:if test="${not isFlexibleProjectReleaseRelationshipEnabled}">
+                                    <%@include file="/html/utils/includes/linkedReleasesEdit.jspf" %>
+                                </core_rt:if>
+                                <core_rt:if test="${isFlexibleProjectReleaseRelationshipEnabled}">
+                                    <%@include file="/html/utils/includes/editLinkedReleasesInNetwork.jspf" %>
+                                </core_rt:if>
                             </div>
                             <core_rt:if test="${not addMode}" >
                                 <div id="tab-Attachments" class="tab-pane <core_rt:if test="${selectedTab == 'tab-Attachments'}">active show</core_rt:if>">
@@ -228,8 +239,6 @@
         </div>
     </div>
 </div>
-
-<core_rt:set var="enableSearchForReleasesFromLinkedProjects" value="${true}" scope="request"/>
 
 <jsp:include page="/html/projects/includes/searchProjects.jsp" />
 <jsp:include page="/html/utils/includes/searchReleases.jsp" />

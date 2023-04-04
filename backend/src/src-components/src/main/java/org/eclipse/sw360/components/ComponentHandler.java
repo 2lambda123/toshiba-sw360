@@ -20,7 +20,9 @@ import org.eclipse.sw360.datahandler.thrift.components.Component;
 import org.eclipse.sw360.datahandler.thrift.components.ComponentService;
 import org.eclipse.sw360.datahandler.thrift.components.Release;
 import org.eclipse.sw360.datahandler.thrift.components.ReleaseLink;
+import org.eclipse.sw360.datahandler.thrift.components.ReleaseNode;
 import org.eclipse.sw360.datahandler.thrift.users.User;
+import org.eclipse.sw360.datahandler.thrift.users.RequestedAction;
 import org.ektorp.http.HttpClient;
 
 import com.cloudant.client.api.CloudantClient;
@@ -695,5 +697,22 @@ public class ComponentHandler implements ComponentService.Iface {
     @Override
     public void sendExportSpreadsheetSuccessMail(String url, String recepient) throws TException {
         handler.sendExportSpreadsheetSuccessMail(url, recepient);
+    }
+
+    @Override
+    public boolean isReleaseActionAllowed(Release release, User user, RequestedAction action) {
+        return handler.isReleaseActionAllowed(release, user, action);
+    }
+
+    @Override
+    public List<Release> getReleasesByListIds(List<String> ids, User user) throws TException {
+        assertUser(user);
+        assertNotNull(ids);
+        return handler.getReleaseByIds(ids);
+    }
+
+    @Override
+    public List<ReleaseNode> getReleaseRelationNetworkOfRelease(Release release, User user) {
+        return handler.getReleaseRelationNetworkOfRelease(release, user);
     }
 }

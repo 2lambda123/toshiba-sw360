@@ -903,4 +903,19 @@ service ComponentService {
     * Send email to the user once spreadsheet export completed
     */
     void sendExportSpreadsheetSuccessMail(1: string url, 2: string userEmail);
+
+    /**
+    * Check accessible of release
+    */
+    bool isReleaseActionAllowed(1: Release release, 2:User user, 3:RequestedAction action)
+
+    /**
+    * Gets list releases with list release id
+    */
+    list<Release> getReleasesByListIds(1: list<string> ids, 2:User user)
+
+    /**
+    * Get releases dependency network of release
+    */
+    list<ReleaseNode> getReleaseRelationNetworkOfRelease(1: Release release, 2:User user)
 }

@@ -2738,4 +2738,45 @@ public class ComponentDatabaseHandler extends AttachmentAwareDatabaseHandler {
                 "component", url);
     }
 
+    public List<Release> getReleaseByIds(List<String> ids) {
+        return releaseRepository.getFullDocsByListIds(SummaryType.SHORT, ids);
+    }
+
+    public List<ReleaseNode> getReleaseRelationNetworkOfRelease(Release release, User user) {
+        ReleaseNode dependencyNetwork = new ReleaseNode(release.getId());
+        getReleaseLinkJSONS(dependencyNetwork, user);
+        return Collections.singletonList(dependencyNetwork);
+    }
+
+    private ReleaseNode getReleaseLinkJSONS(ReleaseNode releaseLinkJSON, User user) {
+        Release releaseById = null;
+        try {
+            releaseById = getAccessibleRelease(releaseLinkJSON.getReleaseId(), user);
+            List<Release> releaseList = new ArrayList<>();
+            if (releaseById.getReleaseIdToRelationship() != null) {
+                releaseList = getAccessibleReleases(releaseById.getReleaseIdToRelationship().keySet().stream().collect(Collectors.toSet()), user);
+            }
+            List<ReleaseNode> linkedReleasesJSON = new ArrayList<>();
+            releaseLinkJSON.setMainlineState(MainlineState.OPEN.toString());
+            releaseLinkJSON.setReleaseRelationship(ReleaseRelationship.CONTAINED.toString());
+            releaseLinkJSON.setCreateOn(SW360Utils.getCreatedOn());
+            releaseLinkJSON.setCreateBy(user.getEmail());
+            releaseLinkJSON.setComment("");
+            for (Release release : releaseList) {
+                ReleaseNode rj = new ReleaseNode(release.getId());
+                rj.setMainlineState(MainlineState.OPEN.toString());
+                rj.setReleaseRelationship(ReleaseRelationship.CONTAINED.toString());
+                rj.setComment("");
+                rj.setCreateOn(SW360Utils.getCreatedOn());
+                rj.setCreateBy(user.getEmail());
+                linkedReleasesJSON.add(getReleaseLinkJSONS(rj, user));
+            }
+            releaseLinkJSON.setReleaseLink(linkedReleasesJSON);
+
+        } catch (TException e) {
+            log.error("Error when get Release: " + releaseLinkJSON.getReleaseId());
+        }
+        return releaseLinkJSON;
+    }
+
 }
