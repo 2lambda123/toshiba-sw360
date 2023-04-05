@@ -1955,7 +1955,7 @@ public class ProjectDatabaseHandler extends AttachmentAwareDatabaseHandler {
             }
             releaseLink.setName(releaseById.getName());
             releaseLink.setVersion(releaseById.getVersion());
-            releaseLink.setLongName(releaseById.getName() + " (" + releaseById.getVersion() + ")");
+            releaseLink.setLongName(SW360Utils.printFullname(releaseById));
             releaseLink.setClearingState(releaseById.getClearingState());
             releaseLink.setComponentType(componentById.getComponentType());
             releaseLink.setLicenseIds(releaseById.getMainLicenseIds());

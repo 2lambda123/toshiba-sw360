@@ -1289,10 +1289,10 @@ public class ProjectPortlet extends FossologyAwarePortlet {
             });
 
             getInformationFromNetwork(dependencyNetwork, releaseIds, parentIds, layers, mainlineStates, releaseRelationShips, indexes, comments, 0, "");
-            serveNewTableRowLinkedRelease(request, response, releaseIds.stream().toArray(String[]::new),
-                                        parentIds.stream().toArray(String[]::new), layers.stream().toArray(String[]::new),
-                                        mainlineStates.stream().toArray(String[]::new), releaseRelationShips.stream().toArray(String[]::new),
-                                        indexes.stream().toArray(String[]::new), comments.stream().toArray(String[]::new));
+            serveNewTableRowLinkedRelease(request, response, releaseIds.toArray(String[]::new),
+                                        parentIds.toArray(String[]::new), layers.toArray(String[]::new),
+                                        mainlineStates.toArray(String[]::new), releaseRelationShips.toArray(String[]::new),
+                                        indexes.toArray(String[]::new), comments.toArray(String[]::new));
         }
     }
 
@@ -3415,12 +3415,13 @@ public class ProjectPortlet extends FossologyAwarePortlet {
             List<String> listReleaseIds = Arrays.asList(linkedIds);
             List<Release> releases = client.getReleasesByListIds(listReleaseIds, user);
             for (int index = 0; index < releases.size(); index++) {
-                final Vendor vendor = releases.get(index).getVendor();
-                final String vendorName = vendor != null ? vendor.getShortname() : "";
                 Release loadingRelease =  releases.get(index);
                 List<Release> releasesWithSameComponent = Collections.singletonList(loadingRelease);
-                ReleaseLink linkedRelease = new ReleaseLink(releases.get(index).getId(), vendorName, releases.get(index).getName(), releases.get(index).getVersion(),
-                        SW360Utils.printFullname(releases.get(index)), !nullToEmptyMap(releases.get(index).getReleaseIdToRelationship()).isEmpty());
+                ReleaseLink linkedRelease = new ReleaseLink();
+                linkedRelease.setId(releases.get(index).getId());
+                linkedRelease.setName(releases.get(index).getName());
+                linkedRelease.setVersion(releases.get(index).getVersion());
+                linkedRelease.setLongName(SW360Utils.printFullname(releases.get(index)));
                 linkedRelease.setReleaseWithSameComponent(releasesWithSameComponent);
                 linkedRelease.setLayer(Integer.parseInt(layers[index]));
                 linkedRelease.setParentNodeId(parentIds[index]);
