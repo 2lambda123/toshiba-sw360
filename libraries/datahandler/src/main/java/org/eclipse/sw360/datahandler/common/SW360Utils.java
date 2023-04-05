@@ -803,4 +803,14 @@ public class SW360Utils {
 
         return setReleaseIds;
     }
+
+    public static ProjectReleaseRelationship extractProjectReleaseRelationShipFromReleaseNode(ReleaseNode node) {
+        ProjectReleaseRelationship projectReleaseRelationship = new ProjectReleaseRelationship();
+        projectReleaseRelationship.setReleaseRelation(ReleaseRelationship.valueOf(node.getReleaseRelationship()));
+        projectReleaseRelationship.setMainlineState(MainlineState.valueOf(node.getMainlineState()));
+        projectReleaseRelationship.setCreatedBy(node.getCreateBy());
+        projectReleaseRelationship.setCreatedOn(node.getCreateOn());
+        projectReleaseRelationship.setComment(node.getComment());
+        return projectReleaseRelationship;
+    }
 }

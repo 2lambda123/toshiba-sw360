@@ -361,6 +361,10 @@ public class ProjectDatabaseHandler extends AttachmentAwareDatabaseHandler {
             return addDocumentRequestSummary;
         }
 
+        if (SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
+            syncReleaseRelationNetworkAndReleaseIdToUsage(project);
+        }
+
         if (!isDependenciesExists(project, user)) {
             return new AddDocumentRequestSummary()
                     .setRequestStatus(AddDocumentRequestStatus.INVALID_INPUT);
@@ -404,6 +408,10 @@ public class ProjectDatabaseHandler extends AttachmentAwareDatabaseHandler {
 
         // Prepare project for database
         prepareProject(project);
+
+        if (SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
+            syncReleaseRelationNetworkAndReleaseIdToUsage(project);
+        }
 
         Project actual = repository.get(project.getId());
 
@@ -2130,5 +2138,28 @@ public class ProjectDatabaseHandler extends AttachmentAwareDatabaseHandler {
             visitedIds.pop();
         }
         return Optional.ofNullable(projectLink);
+    }
+
+    private void syncReleaseRelationNetworkAndReleaseIdToUsage(Project project) {
+        if (CommonUtils.isNullEmptyOrWhitespace(project.getReleaseRelationNetwork())) {
+            return;
+        }
+
+        ObjectMapper mapper = new ObjectMapper();
+        List<ReleaseNode> dependencyNetwork = new ArrayList<>();
+        try {
+            dependencyNetwork =  mapper.readValue(project.getReleaseRelationNetwork(), new TypeReference<>() {
+            });
+        } catch (JsonProcessingException e) {
+            log.error("Error when parsing dependency network from json to array");
+        }
+
+        Map<String, ProjectReleaseRelationship> releaseIdToUsage = new HashMap<String, ProjectReleaseRelationship>();
+
+        for (ReleaseNode node : dependencyNetwork) {
+            ProjectReleaseRelationship projectReleaseRelationship = SW360Utils.extractProjectReleaseRelationShipFromReleaseNode(node);
+            releaseIdToUsage.put(node.getReleaseId(), projectReleaseRelationship);
+        }
+        project.setReleaseIdToUsage(releaseIdToUsage);
     }
 }
