@@ -13,6 +13,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.thrift.TException;
+import org.eclipse.sw360.datahandler.common.CommonUtils;
+import org.eclipse.sw360.datahandler.common.SW360Constants;
 import org.eclipse.sw360.datahandler.common.SW360Utils;
 import org.eclipse.sw360.datahandler.thrift.MainlineState;
 import org.eclipse.sw360.datahandler.thrift.ProjectReleaseRelationship;
@@ -1707,45 +1709,74 @@ public class ProjectSpecTest extends TestRestDocsSpecBase {
         project.put("state", ProjectState.ACTIVE.toString());
         project.put("phaseOutSince", "2020-06-24");
 
-        this.mockMvc.perform(post("/api/projects/readableFormat")
-                        .contentType(MediaTypes.HAL_JSON)
-                        .content(this.objectMapper.writeValueAsString(project))
-                        .header("Authorization", "Bearer " + accessToken))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("_embedded.createdBy.email", Matchers.is("admin@sw360.org")))
-                .andDo(this.documentationHandler.document(
-                        requestFields(
-                                fieldWithPath("name").description("The name of the project"),
-                                fieldWithPath("description").description("The project description"),
-                                fieldWithPath("version").description("The version of the new project"),
-                                fieldWithPath("visibility").description("The project visibility, possible values are: " + Arrays.asList(Visibility.values())),
-                                fieldWithPath("projectType").description("The project type, possible values are: " + Arrays.asList(ProjectType.values())),
-                                subsectionWithPath("linkedProjects").description("The `linked project id` - metadata of linked projects (`enableSvm` - whether linked projects will be part of SVM, `projectRelationship` - relationship between linked project and the project. Possible values: " + Arrays.asList(ProjectRelationship.values())),
-                                fieldWithPath("leadArchitect").description("The lead architect of the project"),
-                                fieldWithPath("contributors").description("An array of contributors to the project"),
-                                fieldWithPath("moderators").description("An array of moderators"),
-                                fieldWithPath("state").description("The project active status, possible values are: " + Arrays.asList(ProjectState.values())),
-                                fieldWithPath("phaseOutSince").description("The project phase-out date"),
-                                subsectionWithPath("dependencyNetwork").description("Dependency network")
-                        ),
-                        responseFields(
-                                fieldWithPath("name").description("The name of the project"),
-                                fieldWithPath("type").description("project"),
-                                fieldWithPath("version").description("The project version"),
-                                fieldWithPath("visibility").description("The project visibility, possible values are: " + Arrays.asList(Visibility.values())),
-                                fieldWithPath("createdOn").description("The date the project was created"),
-                                fieldWithPath("description").description("The project description"),
-                                fieldWithPath("projectType").description("The project type, possible values are: " + Arrays.asList(ProjectType.values())),
-                                fieldWithPath("securityResponsibles").description("An array of users responsible for security of the project."),
-                                fieldWithPath("enableSvm").description("Security vulnerability monitoring flag"),
-                                fieldWithPath("enableVulnerabilitiesDisplay").description("Displaying vulnerabilities flag."),
-                                fieldWithPath("state").description("The project active status, possible values are: " + Arrays.asList(ProjectState.values())),
-                                fieldWithPath("phaseOutSince").description("The project phase-out date"),
-                                fieldWithPath("considerReleasesFromExternalList").description("Consider list of releases from existing external list"),
-                                subsectionWithPath("dependencyNetwork").description("Release and project dependency network"),
-                                subsectionWithPath("_links").description("<<resources-index-links,Links>> to other resources"),
-                                subsectionWithPath("_embedded.createdBy").description("The user who created this project")
-                        )));
+        if (SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
+            this.mockMvc.perform(post("/api/projects/readableFormat")
+                            .contentType(MediaTypes.HAL_JSON)
+                            .content(this.objectMapper.writeValueAsString(project))
+                            .header("Authorization", "Bearer " + accessToken))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("_embedded.createdBy.email", Matchers.is("admin@sw360.org")))
+                    .andDo(this.documentationHandler.document(
+                            requestFields(
+                                    fieldWithPath("name").description("The name of the project"),
+                                    fieldWithPath("description").description("The project description"),
+                                    fieldWithPath("version").description("The version of the new project"),
+                                    fieldWithPath("visibility").description("The project visibility, possible values are: " + Arrays.asList(Visibility.values())),
+                                    fieldWithPath("projectType").description("The project type, possible values are: " + Arrays.asList(ProjectType.values())),
+                                    subsectionWithPath("linkedProjects").description("The `linked project id` - metadata of linked projects (`enableSvm` - whether linked projects will be part of SVM, `projectRelationship` - relationship between linked project and the project. Possible values: " + Arrays.asList(ProjectRelationship.values())),
+                                    fieldWithPath("leadArchitect").description("The lead architect of the project"),
+                                    fieldWithPath("contributors").description("An array of contributors to the project"),
+                                    fieldWithPath("moderators").description("An array of moderators"),
+                                    fieldWithPath("state").description("The project active status, possible values are: " + Arrays.asList(ProjectState.values())),
+                                    fieldWithPath("phaseOutSince").description("The project phase-out date"),
+                                    subsectionWithPath("dependencyNetwork").description("Dependency network")
+                            ),
+                            responseFields(
+                                    fieldWithPath("name").description("The name of the project"),
+                                    fieldWithPath("type").description("project"),
+                                    fieldWithPath("version").description("The project version"),
+                                    fieldWithPath("visibility").description("The project visibility, possible values are: " + Arrays.asList(Visibility.values())),
+                                    fieldWithPath("createdOn").description("The date the project was created"),
+                                    fieldWithPath("description").description("The project description"),
+                                    fieldWithPath("projectType").description("The project type, possible values are: " + Arrays.asList(ProjectType.values())),
+                                    fieldWithPath("securityResponsibles").description("An array of users responsible for security of the project."),
+                                    fieldWithPath("enableSvm").description("Security vulnerability monitoring flag"),
+                                    fieldWithPath("enableVulnerabilitiesDisplay").description("Displaying vulnerabilities flag."),
+                                    fieldWithPath("state").description("The project active status, possible values are: " + Arrays.asList(ProjectState.values())),
+                                    fieldWithPath("phaseOutSince").description("The project phase-out date"),
+                                    fieldWithPath("considerReleasesFromExternalList").description("Consider list of releases from existing external list"),
+                                    subsectionWithPath("dependencyNetwork").description("Release and project dependency network"),
+                                    subsectionWithPath("_links").description("<<resources-index-links,Links>> to other resources"),
+                                    subsectionWithPath("_embedded.createdBy").description("The user who created this project")
+                            )));
+        } else {
+            this.mockMvc.perform(post("/api/projects/readableFormat")
+                            .contentType(MediaTypes.HAL_JSON)
+                            .content(this.objectMapper.writeValueAsString(project))
+                            .header("Authorization", "Bearer " + accessToken))
+                    .andExpect(status().isInternalServerError())
+                    .andDo(this.documentationHandler.document(
+                            requestFields(
+                                    fieldWithPath("name").description("The name of the project"),
+                                    fieldWithPath("description").description("The project description"),
+                                    fieldWithPath("version").description("The version of the new project"),
+                                    fieldWithPath("visibility").description("The project visibility, possible values are: " + Arrays.asList(Visibility.values())),
+                                    fieldWithPath("projectType").description("The project type, possible values are: " + Arrays.asList(ProjectType.values())),
+                                    subsectionWithPath("linkedProjects").description("The `linked project id` - metadata of linked projects (`enableSvm` - whether linked projects will be part of SVM, `projectRelationship` - relationship between linked project and the project. Possible values: " + Arrays.asList(ProjectRelationship.values())),
+                                    fieldWithPath("leadArchitect").description("The lead architect of the project"),
+                                    fieldWithPath("contributors").description("An array of contributors to the project"),
+                                    fieldWithPath("moderators").description("An array of moderators"),
+                                    fieldWithPath("state").description("The project active status, possible values are: " + Arrays.asList(ProjectState.values())),
+                                    fieldWithPath("phaseOutSince").description("The project phase-out date"),
+                                    subsectionWithPath("dependencyNetwork").description("Dependency network")
+                            ),
+                            responseFields(
+                                    fieldWithPath("timestamp").description("Timestamp"),
+                                    fieldWithPath("status").description("Status"),
+                                    fieldWithPath("error").description("Error"),
+                                    fieldWithPath("message").description("Message")
+                            )));
+        }
     }
 
     @Test
@@ -1781,7 +1812,6 @@ public class ProjectSpecTest extends TestRestDocsSpecBase {
                                 "    \"createBy\": \"admin@sw360.org\"\n" +
                                 "  }\n" +
                                 "]"));
-        given(this.projectServiceMock.updateProject(any(), any())).willReturn(RequestStatus.SUCCESS);
 
         String accessToken = TestHelper.getAccessToken(mockMvc, testUserId, testUserPassword);
         Map<String, Object> project = new HashMap<>();
@@ -1821,40 +1851,66 @@ public class ProjectSpecTest extends TestRestDocsSpecBase {
         project.put("state", ProjectState.ACTIVE.toString());
         project.put("phaseOutSince", "2020-06-24");
 
-        this.mockMvc.perform(patch("/api/projects/readableFormat/111111111")
-                        .contentType(MediaTypes.HAL_JSON)
-                        .content(this.objectMapper.writeValueAsString(project))
-                        .header("Authorization", "Bearer " + accessToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("_embedded.createdBy.email", Matchers.is("admin@sw360.org")))
-                .andDo(this.documentationHandler.document(
-                        requestFields(
-                                fieldWithPath("name").description("The name of the project"),
-                                fieldWithPath("description").description("The project description"),
-                                fieldWithPath("version").description("The version of the new project"),
-                                fieldWithPath("visibility").description("The project visibility, possible values are: " + Arrays.asList(Visibility.values())),
-                                fieldWithPath("projectType").description("The project type, possible values are: " + Arrays.asList(ProjectType.values())),
-                                fieldWithPath("state").description("The project active status, possible values are: " + Arrays.asList(ProjectState.values())),
-                                fieldWithPath("phaseOutSince").description("The project phase-out date"),
-                                subsectionWithPath("dependencyNetwork").description("Dependency network")
-                        ),
-                        responseFields(
-                                fieldWithPath("name").description("The name of the project"),
-                                fieldWithPath("type").description("project"),
-                                fieldWithPath("version").description("The project version"),
-                                fieldWithPath("visibility").description("The project visibility, possible values are: " + Arrays.asList(Visibility.values())),
-                                fieldWithPath("description").description("The project description"),
-                                fieldWithPath("projectType").description("The project type, possible values are: " + Arrays.asList(ProjectType.values())),
-                                fieldWithPath("securityResponsibles").description("An array of users responsible for security of the project."),
-                                fieldWithPath("enableSvm").description("Security vulnerability monitoring flag"),
-                                fieldWithPath("createdOn").description("Created date of project"),
-                                fieldWithPath("enableVulnerabilitiesDisplay").description("Displaying vulnerabilities flag."),
-                                fieldWithPath("state").description("The project active status, possible values are: " + Arrays.asList(ProjectState.values())),
-                                fieldWithPath("phaseOutSince").description("The project phase-out date"),
-                                fieldWithPath("considerReleasesFromExternalList").description("Consider list of releases from existing external list"),
-                                subsectionWithPath("dependencyNetwork").description("Release and project dependency network"),
-                                subsectionWithPath("_links").description("<<resources-index-links,Links>> to other resources"),
-                                subsectionWithPath("_embedded.createdBy").description("The user who created this project")
-                        )));
+        if (SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
+            given(this.projectServiceMock.updateProject(any(), any())).willReturn(RequestStatus.SUCCESS);
+            this.mockMvc.perform(patch("/api/projects/readableFormat/111111111")
+                            .contentType(MediaTypes.HAL_JSON)
+                            .content(this.objectMapper.writeValueAsString(project))
+                            .header("Authorization", "Bearer " + accessToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("_embedded.createdBy.email", Matchers.is("admin@sw360.org")))
+                    .andDo(this.documentationHandler.document(
+                            requestFields(
+                                    fieldWithPath("name").description("The name of the project"),
+                                    fieldWithPath("description").description("The project description"),
+                                    fieldWithPath("version").description("The version of the new project"),
+                                    fieldWithPath("visibility").description("The project visibility, possible values are: " + Arrays.asList(Visibility.values())),
+                                    fieldWithPath("projectType").description("The project type, possible values are: " + Arrays.asList(ProjectType.values())),
+                                    fieldWithPath("state").description("The project active status, possible values are: " + Arrays.asList(ProjectState.values())),
+                                    fieldWithPath("phaseOutSince").description("The project phase-out date"),
+                                    subsectionWithPath("dependencyNetwork").description("Dependency network")
+                            ),
+                            responseFields(
+                                    fieldWithPath("name").description("The name of the project"),
+                                    fieldWithPath("type").description("project"),
+                                    fieldWithPath("version").description("The project version"),
+                                    fieldWithPath("visibility").description("The project visibility, possible values are: " + Arrays.asList(Visibility.values())),
+                                    fieldWithPath("description").description("The project description"),
+                                    fieldWithPath("projectType").description("The project type, possible values are: " + Arrays.asList(ProjectType.values())),
+                                    fieldWithPath("securityResponsibles").description("An array of users responsible for security of the project."),
+                                    fieldWithPath("enableSvm").description("Security vulnerability monitoring flag"),
+                                    fieldWithPath("createdOn").description("Created date of project"),
+                                    fieldWithPath("enableVulnerabilitiesDisplay").description("Displaying vulnerabilities flag."),
+                                    fieldWithPath("state").description("The project active status, possible values are: " + Arrays.asList(ProjectState.values())),
+                                    fieldWithPath("phaseOutSince").description("The project phase-out date"),
+                                    fieldWithPath("considerReleasesFromExternalList").description("Consider list of releases from existing external list"),
+                                    subsectionWithPath("dependencyNetwork").description("Release and project dependency network"),
+                                    subsectionWithPath("_links").description("<<resources-index-links,Links>> to other resources"),
+                                    subsectionWithPath("_embedded.createdBy").description("The user who created this project")
+                            )));
+        } else {
+            this.mockMvc.perform(patch("/api/projects/readableFormat/111111111")
+                            .contentType(MediaTypes.HAL_JSON)
+                            .content(this.objectMapper.writeValueAsString(project))
+                            .header("Authorization", "Bearer " + accessToken))
+                    .andExpect(status().isInternalServerError())
+                    .andDo(this.documentationHandler.document(
+                            requestFields(
+                                    fieldWithPath("name").description("The name of the project"),
+                                    fieldWithPath("description").description("The project description"),
+                                    fieldWithPath("version").description("The version of the new project"),
+                                    fieldWithPath("visibility").description("The project visibility, possible values are: " + Arrays.asList(Visibility.values())),
+                                    fieldWithPath("projectType").description("The project type, possible values are: " + Arrays.asList(ProjectType.values())),
+                                    fieldWithPath("state").description("The project active status, possible values are: " + Arrays.asList(ProjectState.values())),
+                                    fieldWithPath("phaseOutSince").description("The project phase-out date"),
+                                    subsectionWithPath("dependencyNetwork").description("Dependency network")
+                            ),
+                            responseFields(
+                                    fieldWithPath("timestamp").description("Timestamp"),
+                                    fieldWithPath("status").description("Status"),
+                                    fieldWithPath("error").description("Error"),
+                                    fieldWithPath("message").description("Message")
+                            )));
+        }
     }
 }

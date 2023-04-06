@@ -23,6 +23,7 @@ import com.google.gson.Gson;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.MethodNotSupportedException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.thrift.TException;
@@ -78,7 +79,6 @@ import org.eclipse.sw360.rest.resourceserver.release.Sw360ReleaseService;
 import org.eclipse.sw360.rest.resourceserver.user.Sw360UserService;
 import org.eclipse.sw360.rest.resourceserver.vulnerability.Sw360VulnerabilityService;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.beans.NotReadablePropertyException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.json.GsonJsonParser;
 import org.springframework.data.domain.Pageable;
@@ -1209,7 +1209,10 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
 
     @PreAuthorize("hasAuthority('WRITE')")
     @RequestMapping(value = PROJECTS_URL + "/readableFormat", method = RequestMethod.POST)
-    public ResponseEntity createProjectReadableFormat(@RequestBody Map<String, Object> reqBodyMap) throws TException {
+    public ResponseEntity createProjectReadableFormat(@RequestBody Map<String, Object> reqBodyMap) throws TException, MethodNotSupportedException {
+        if (!SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
+            throw new MethodNotSupportedException(SW360Constants.PLEASE_ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP);
+        }
         User sw360User = restControllerHelper.getSw360UserFromAuthentication();
         try {
             Project project = convertFromReadableFormatToProject(reqBodyMap, ProjectOperation.CREATE, sw360User);
@@ -1231,7 +1234,10 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
     @RequestMapping(value = PROJECTS_URL + "/readableFormat/{id}", method = RequestMethod.PATCH)
     public ResponseEntity patchProjectReadableFormat(
             @PathVariable("id") String id,
-            @RequestBody Map<String, Object> reqBodyMap) throws TException {
+            @RequestBody Map<String, Object> reqBodyMap) throws TException, MethodNotSupportedException {
+        if (!SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
+            throw new MethodNotSupportedException(SW360Constants.PLEASE_ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP);
+        }
         User user = restControllerHelper.getSw360UserFromAuthentication();
         Project sw360Project = projectService.getProjectForUserById(id, user);
         try {

@@ -74,6 +74,8 @@ public class SW360Constants {
     public static final String TYPE_OBLIGATIONELEMENT = "obligationElement";
     public static final String TYPE_OBLIGATIONNODE = "obligationNode";
     public static final String TYPE_DOCUMENT = "document";
+    public static final String PLEASE_ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP = "Please enable flexible project " +
+            "release relationship configuration to use this function (enable.flexible.project.release.relationship = true)";
 
     public static final String SVM_COMPONENT_ID;
     public static final String SVM_MONITORINGLIST_ID;
@@ -174,7 +176,8 @@ public class SW360Constants {
         SVM_SHORT_STATUS_KEY = props.getProperty("svm.short.status.key", "");
         SVM_SCHEDULER_EMAIL = props.getProperty("svm.scheduler.email", "");
         SVM_MONITORINGLIST_ID = props.getProperty("svm.monitoringlist.id", "");
-        ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP = Boolean.parseBoolean(props.getProperty("enable.flexible.project.release.relationship", "false"));
+        ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP = Boolean.parseBoolean(
+                System.getProperty("RunTestFlexibleRelationship", props.getProperty("enable.flexible.project.release.relationship", "false")));
     }
 
     private static Map.Entry<String, String> pair(TFieldIdEnum field, String displayName){
