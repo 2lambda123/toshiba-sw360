@@ -103,7 +103,7 @@ public abstract class LinkedReleasesAndProjectsAwarePortlet extends AttachmentAw
                             PortletRequest.RESOURCE_PHASE);
                 } else {
                     try {
-                        loadLinkedReleaseOfProject(request, response);
+                        loadLinkedReleaseOfProject(request);
                         include("/html/utils/ajax/linkedReleaseInNetworkRows.jsp", request, response,
                                 PortletRequest.RESOURCE_PHASE);
                     } catch (TException e) {
@@ -318,7 +318,7 @@ public abstract class LinkedReleasesAndProjectsAwarePortlet extends AttachmentAw
         return relMainLineState;
     }
 
-    protected void loadLinkedReleaseOfProject(ResourceRequest request, ResourceResponse response) throws TException {
+    protected void loadLinkedReleaseOfProject(ResourceRequest request) throws TException {
         String projectId = request.getParameter("projectId");
         String[] trace = request.getParameterValues("trace[]");
         String branchId = request.getParameter(PortalConstants.NETWORK_PARENT_BRANCH_ID);

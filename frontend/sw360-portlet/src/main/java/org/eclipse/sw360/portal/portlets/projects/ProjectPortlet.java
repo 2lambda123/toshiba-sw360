@@ -98,8 +98,6 @@ import static com.google.common.base.Strings.nullToEmpty;
 import static com.liferay.portal.kernel.json.JSONFactoryUtil.createJSONArray;
 import static com.liferay.portal.kernel.json.JSONFactoryUtil.createJSONObject;
 import static org.eclipse.sw360.datahandler.common.CommonUtils.*;
-import static org.eclipse.sw360.datahandler.common.SW360Assert.assertNotNull;
-import static org.eclipse.sw360.datahandler.common.SW360Assert.assertUser;
 import static org.eclipse.sw360.datahandler.common.SW360Constants.CONTENT_TYPE_OPENXML_SPREADSHEET;
 import static org.eclipse.sw360.datahandler.common.SW360Utils.printName;
 import static org.eclipse.sw360.datahandler.common.WrappedException.wrapException;
@@ -3362,7 +3360,7 @@ public class ProjectPortlet extends FossologyAwarePortlet {
         ProjectService.Iface client = thriftClients.makeProjectClient();
         User user = UserCacheHolder.getUserFromRequest(request);
         String projectId = request.getParameter(DOCUMENT_ID);
-        List<Map<String, String>> clearingStatusList = new ArrayList<Map<String, String>>();
+        List<Map<String, String>> clearingStatusList = new ArrayList<>();
         try {
             clearingStatusList = client.getAccessibleDependencyNetworkForListView(projectId, user);
         } catch (TException e) {
@@ -3476,7 +3474,7 @@ public class ProjectPortlet extends FossologyAwarePortlet {
         String[] childReleaseIds = request.getParameterValues(CHILD_RELEASE_ID_ARRAY);
         String[] releaseIds = request.getParameterValues(RELEASE_ID_ARRAY);
         final ComponentService.Iface releaseClient = thriftClients.makeComponentClient();
-        Map<String, Set<String>> result = new HashMap<String, Set<String>>();
+        Map<String, Set<String>> result = new HashMap<>();
         if (releaseIds == null || childReleaseIds == null || releaseIds.length == 0 || childReleaseIds.length == 0) {
             result.put("data", new HashSet<>());
         } else {

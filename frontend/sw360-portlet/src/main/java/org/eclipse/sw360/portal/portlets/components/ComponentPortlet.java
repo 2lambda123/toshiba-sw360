@@ -2604,8 +2604,7 @@ public class ComponentPortlet extends FossologyAwarePortlet {
     private void setUsingDocsWithFlexibleDependencyNetwork(RenderRequest request, User user, ComponentService.Iface client, Set<String> releaseIds) {
         Set<Component> usingComponentsForComponent = null;
         List<Project> usingProjectInDependencyNetwork;
-
-        if (releaseIds != null && releaseIds.size() > 0) {
+        if (CommonUtils.isNotEmpty(releaseIds)) {
             try {
                 usingComponentsForComponent = client.getUsingComponentsWithAccessibilityForComponent(releaseIds, user);
                 usingProjectInDependencyNetwork = SW360Utils.getUsingProjectByReleaseIds(releaseIds, user);

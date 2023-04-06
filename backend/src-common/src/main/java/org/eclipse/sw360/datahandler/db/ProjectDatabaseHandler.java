@@ -1934,7 +1934,6 @@ public class ProjectDatabaseHandler extends AttachmentAwareDatabaseHandler {
     public List<ReleaseLink> getReleaseLinksOfProjectNetWorkByTrace(List<String> trace, String projectId, User user) throws TException{
         Project project = repository.get(projectId);
         String releaseNetwork = project.getReleaseRelationNetwork();
-        ObjectMapper mapper = new ObjectMapper();
         List<ReleaseNode> listReleaseLinkJson;
         List<ReleaseLink> linkedReleases = new ArrayList<>();
         try {
@@ -1963,11 +1962,7 @@ public class ProjectDatabaseHandler extends AttachmentAwareDatabaseHandler {
             releaseLink.setReleaseRelationship(ReleaseRelationship.valueOf(releaseNode.getReleaseRelationship()));
             releaseLink.setMainlineState(MainlineState.valueOf(releaseNode.getMainlineState()));
             releaseLink.setComment(releaseNode.getComment());
-            if (releaseNode.getReleaseLink().size() > 0) {
-                releaseLink.setHasSubreleases(true);
-            } else {
-                releaseLink.setHasSubreleases(false);
-            }
+            releaseLink.setHasSubreleases(!releaseNode.getReleaseLink().isEmpty());
             releaseLink.setName(releaseById.getName());
             releaseLink.setVersion(releaseById.getVersion());
             releaseLink.setLongName(SW360Utils.printFullname(releaseById));
@@ -1997,14 +1992,13 @@ public class ProjectDatabaseHandler extends AttachmentAwareDatabaseHandler {
     public List<Map<String, String>> getClearingStateForDependencyNetworkListView(String projectId, User user, boolean isInaccessibleLinkMasked)
             throws SW360Exception {
         Project projectById = getProjectById(projectId, user);
-        List<Map<String, String>> clearingStatusList = new ArrayList<Map<String, String>>();
+        List<Map<String, String>> clearingStatusList = new ArrayList<>();
         LinkedHashMap<String, String> projectOrigin = new LinkedHashMap<>();
         projectOrigin.put(projectId, SW360Utils.printName(projectById));
         LinkedHashMap<String, String> releaseOrigin = new LinkedHashMap<>();
         Map<String, ProjectProjectRelationship> linkedProjects = projectById.getLinkedProjects();
 
         String releaseNetwork = projectById.getReleaseRelationNetwork();
-        ObjectMapper mapper = new ObjectMapper();
         List<ReleaseNode> listReleaseLinkJson;
         try {
             listReleaseLinkJson = mapper.readValue(releaseNetwork, new TypeReference<List<ReleaseNode>>() {
@@ -2037,7 +2031,7 @@ public class ProjectDatabaseHandler extends AttachmentAwareDatabaseHandler {
             if (!isInaccessibleLinkMasked || componentDatabaseHandler.isReleaseActionAllowed(rel, user, RequestedAction.READ)) {
                 releaseOrigin.put(releaseId, SW360Utils.printName(rel));
                 Map<String, String> row = createReleaseCSRow(relation, projectMailLineState, rel, clearingStatusList, user, comment);
-                if (listLinkedRelease != null && listLinkedRelease.size() > 0) {
+                if (CommonUtils.isNotEmpty(listLinkedRelease)) {
                     flattenLinkedReleaseOfRelease(listLinkedRelease, projectOrigin, releaseOrigin,
                             clearingStatusList, user, isInaccessibleLinkMasked);
                 }
@@ -2067,7 +2061,6 @@ public class ProjectDatabaseHandler extends AttachmentAwareDatabaseHandler {
             Map<String, ProjectProjectRelationship> subprojects = linkedProjectById.getLinkedProjects();
 
             String releaseNetwork = linkedProjectById.getReleaseRelationNetwork();
-            ObjectMapper mapper = new ObjectMapper();
             List<ReleaseNode> listReleaseLinkJson;
             try {
                 listReleaseLinkJson = mapper.readValue(releaseNetwork, new TypeReference<List<ReleaseNode>>() {
@@ -2103,7 +2096,6 @@ public class ProjectDatabaseHandler extends AttachmentAwareDatabaseHandler {
                 projectLink = new ProjectLink(id, project.name);
                 if (project.getReleaseRelationNetwork() != null && project.getReleaseRelationNetwork().length() > 0 && (maxDepth < 0 || visitedIds.size() < maxDepth)){
                     String releaseNetwork = project.getReleaseRelationNetwork();
-                    ObjectMapper mapper = new ObjectMapper();
                     List<ReleaseNode> listReleaseLinkJson;
                     List<ReleaseLink> linkedReleases = new ArrayList<>();
                     try {
@@ -2145,7 +2137,6 @@ public class ProjectDatabaseHandler extends AttachmentAwareDatabaseHandler {
             return;
         }
 
-        ObjectMapper mapper = new ObjectMapper();
         List<ReleaseNode> dependencyNetwork = new ArrayList<>();
         try {
             dependencyNetwork =  mapper.readValue(project.getReleaseRelationNetwork(), new TypeReference<>() {
@@ -2154,7 +2145,7 @@ public class ProjectDatabaseHandler extends AttachmentAwareDatabaseHandler {
             log.error("Error when parsing dependency network from json to array");
         }
 
-        Map<String, ProjectReleaseRelationship> releaseIdToUsage = new HashMap<String, ProjectReleaseRelationship>();
+        Map<String, ProjectReleaseRelationship> releaseIdToUsage = new HashMap<>();
 
         for (ReleaseNode node : dependencyNetwork) {
             ProjectReleaseRelationship projectReleaseRelationship = SW360Utils.extractProjectReleaseRelationShipFromReleaseNode(node);
