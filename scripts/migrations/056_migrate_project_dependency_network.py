@@ -75,7 +75,7 @@ def applyTranferData(project, log):
     updatedDocId['id'] = project.get('_id')
     if not DRY_RUN:
         db.save(project)
-        print 'Removing field name ' + deleteFieldName + ' and add field ' + newFieldName + ' done for project ' + project.get('_id')
+        print 'Add field ' + newFieldName + ' done for project ' + project.get('_id')
         log['Success updated project'].append(updatedDocId)
     else:
         log['Project will be update with DRY RUN'].append(updatedDocId)
