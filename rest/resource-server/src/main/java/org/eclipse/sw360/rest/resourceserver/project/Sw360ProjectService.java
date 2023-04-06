@@ -57,6 +57,7 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PreDestroy;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -484,5 +485,9 @@ public class Sw360ProjectService implements AwareOfRestServices<Project> {
     public List<Project> getMyProjects(User user, Map<String, Boolean> userRoles) throws TException {
         ProjectService.Iface sw360ProjectClient = getThriftProjectClient();
         return sw360ProjectClient.getMyProjects(user, userRoles);
+    }
+
+    public List<Project> getProjectsUsedReleaseInDependencyNetwork(String releaseId) {
+        return SW360Utils.getUsingProjectByReleaseIds(Collections.singleton(releaseId), null);
     }
 }
