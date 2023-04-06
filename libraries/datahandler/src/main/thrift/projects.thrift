@@ -622,4 +622,10 @@ service ProjectService {
     * get dependency network for list view
     */
     list<map<string, string>> getAccessibleDependencyNetworkForListView(1: string projectId, 2: User user);
+
+
+    /**
+     * returns a list of projects which match `text` and the `subQueryRestrictions`
+     */
+    list<Project> refineSearchWithoutUser(1: string text, 2: map<string,set<string>>  subQueryRestrictions);
 }

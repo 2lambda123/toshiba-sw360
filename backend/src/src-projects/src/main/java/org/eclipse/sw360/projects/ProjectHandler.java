@@ -153,11 +153,17 @@ public class ProjectHandler implements ProjectService.Iface {
 
     @Override
     public Set<Project> searchByReleaseId(String id, User user) throws TException {
+        if (SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
+            return searchHandler.searchByReleaseId(id, user);
+        }
         return handler.searchByReleaseId(id, user);
     }
 
     @Override
     public Set<Project> searchByReleaseIds(Set<String> ids, User user) throws TException {
+        if (SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
+            return searchHandler.searchByReleaseIds(ids, user);
+        }
         return handler.searchByReleaseId(ids, user);
     }
 
@@ -475,5 +481,10 @@ public class ProjectHandler implements ProjectService.Iface {
     public List<Map<String, String>> getAccessibleDependencyNetworkForListView(String projectId, User user) throws SW360Exception {
         assertNotNull(projectId);
         return handler.getClearingStateForDependencyNetworkListView(projectId, user, true);
+    }
+
+    @Override
+    public List<Project> refineSearchWithoutUser(String text, Map<String, Set<String>> subQueryRestrictions) throws TException {
+        return searchHandler.search(text, subQueryRestrictions);
     }
 }
