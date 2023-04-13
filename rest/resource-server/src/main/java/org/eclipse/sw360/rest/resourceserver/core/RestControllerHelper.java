@@ -9,8 +9,6 @@
  */
 package org.eclipse.sw360.rest.resourceserver.core;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.eclipse.sw360.datahandler.common.CommonUtils;
 import org.eclipse.sw360.datahandler.common.SW360Utils;
 import org.eclipse.sw360.datahandler.resourcelists.*;
@@ -21,7 +19,6 @@ import org.eclipse.sw360.datahandler.thrift.licenses.License;
 import org.eclipse.sw360.datahandler.thrift.licenses.Obligation;
 import org.eclipse.sw360.datahandler.thrift.projects.ClearingRequest;
 import org.eclipse.sw360.datahandler.thrift.projects.Project;
-import org.eclipse.sw360.datahandler.thrift.projects.ProjectDTO;
 import org.eclipse.sw360.datahandler.thrift.users.User;
 import org.eclipse.sw360.datahandler.thrift.vendors.Vendor;
 import org.eclipse.sw360.datahandler.thrift.vulnerabilities.Vulnerability;
@@ -33,7 +30,6 @@ import org.eclipse.sw360.rest.resourceserver.component.ComponentController;
 import org.eclipse.sw360.rest.resourceserver.license.LicenseController;
 import org.eclipse.sw360.rest.resourceserver.license.Sw360LicenseService;
 import org.eclipse.sw360.rest.resourceserver.project.EmbeddedProject;
-import org.eclipse.sw360.rest.resourceserver.project.EmbeddedProjectDTO;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.eclipse.sw360.rest.resourceserver.project.ProjectController;
@@ -856,33 +852,4 @@ public class RestControllerHelper<T> {
         return embeddedClearingRequest;
     }
 
-    public void addEmbeddedProjectDTO(HalResource<ProjectDTO> halProject, Set<String> projectIds, Sw360ProjectService sw360ProjectService, User user) throws TException {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-
-        for (String projectId : projectIds) {
-            final Project project = sw360ProjectService.getProjectForUserById(projectId, user);
-            addEmbeddedProjectDTO(halProject, project);
-        }
-    }
-
-    public void addEmbeddedProjectDTO(HalResource halResource, Project project) {
-        ProjectDTO embeddedProject = convertToEmbeddedProjectDTO(project);
-        HalResource<ProjectDTO> halProject = new HalResource<>(embeddedProject);
-        Link projectLink = linkTo(ProjectController.class)
-                .slash("api" + ProjectController.PROJECTS_URL + "/" + project.getId()).withSelfRel();
-        halProject.add(projectLink);
-        halResource.addEmbeddedResource("sw360:projectDTOs", halProject);
-    }
-
-    public ProjectDTO convertToEmbeddedProjectDTO(Project project) {
-        ProjectDTO embeddedProject = new EmbeddedProjectDTO();
-        embeddedProject.setName(project.getName());
-        embeddedProject.setId(project.getId());
-        embeddedProject.setProjectType(project.getProjectType());
-        embeddedProject.setVersion(project.getVersion());
-        embeddedProject.setVisbility(project.getVisbility());
-        embeddedProject.setType(null);
-        return embeddedProject;
-    }
 }
