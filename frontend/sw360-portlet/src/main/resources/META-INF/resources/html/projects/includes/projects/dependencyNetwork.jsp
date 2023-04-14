@@ -86,8 +86,8 @@
                                 (<a href="#" id="expandAll" class="text-primary"><liferay-ui:message key="expand.next.level" /> </a>|
                                 <a href="#" id="collapseAll" class="text-primary"> <liferay-ui:message key="collapse.all" /></a>)
                             </div>
-                            <core_rt:if test="${projectList.size() > 1 or numberLinkedRelease > 0}">
-                                Linked Releases: ${numberLinkedRelease}, Linked Projects: ${allSubProjectLink.size()}<br>
+                            <core_rt:if test="${projectList.size() > 1 or releaseList.size() > 0}">
+                                Linked Releases: ${releaseList.size()}, Linked Projects: ${projectList.size() - 1}<br>
                             </core_rt:if>
                         </div>
                     </th>
