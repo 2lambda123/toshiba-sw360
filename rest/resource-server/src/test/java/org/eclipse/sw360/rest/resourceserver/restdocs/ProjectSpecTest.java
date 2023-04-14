@@ -13,6 +13,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.thrift.TException;
+import org.eclipse.sw360.datahandler.common.SW360Constants;
 import org.eclipse.sw360.datahandler.common.SW360Utils;
 import org.eclipse.sw360.datahandler.thrift.MainlineState;
 import org.eclipse.sw360.datahandler.thrift.ProjectReleaseRelationship;
@@ -227,6 +228,7 @@ public class ProjectSpecTest extends TestRestDocsSpecBase {
         project.setAdditionalData(additionalData);
         project.setPhaseOutSince("2020-06-24");
         project.setClearingRequestId("CR-1");
+        project.setReleaseRelationNetwork("[{\"comment\":\"\",\"releaseLink\":[],\"createBy\":\"admin@sw360.org\",\"createOn\":\"2022-08-15\",\"mainlineState\":\"OPEN\",\"releaseId\":\"3765276512\",\"releaseRelationship\":\"CONTAINED\"}]");
 
         projectListByName.add(project);
         projectList.add(project);
@@ -665,58 +667,112 @@ public class ProjectSpecTest extends TestRestDocsSpecBase {
     @Test
     public void should_document_get_project() throws Exception {
         String accessToken = TestHelper.getAccessToken(mockMvc, testUserId, testUserPassword);
-        mockMvc.perform(get("/api/projects/" + project.getId())
-                .header("Authorization", "Bearer " + accessToken)
-                .accept(MediaTypes.HAL_JSON))
-                .andExpect(status().isOk())
-                .andDo(this.documentationHandler.document(
-                        links(
-                                linkWithRel("self").description("The <<resources-projects,Projects resource>>")
-                        ),
-                        responseFields(
-                                fieldWithPath("name").description("The name of the project"),
-                                fieldWithPath("version").description("The project version"),
-                                fieldWithPath("createdOn").description("The date the project was created"),
-                                fieldWithPath("description").description("The project description"),
-                                fieldWithPath("projectType").description("The project type, possible values are: " + Arrays.asList(ProjectType.values())),
-                                fieldWithPath("domain").description("The domain, possible values are:"  + Sw360ResourceServer.DOMAIN.toString()),
-                                fieldWithPath("visibility").description("The project visibility, possible values are: " + Arrays.asList(Visibility.values())),
-                                fieldWithPath("businessUnit").description("The business unit this project belongs to"),
-                                subsectionWithPath("externalIds").description("When projects are imported from other tools, the external ids can be stored here. Store as 'Single String' when single value, or 'Array of String' when multi-values"),
-                                subsectionWithPath("additionalData").description("A place to store additional data used by external tools"),
-                                fieldWithPath("ownerAccountingUnit").description("The owner accounting unit of the project"),
-                                fieldWithPath("ownerGroup").description("The owner group of the project"),
-                                fieldWithPath("ownerCountry").description("The owner country of the project"),
-                                fieldWithPath("obligationsText").description("The obligations text of the project"),
-                                fieldWithPath("clearingSummary").description("The clearing summary text of the project"),
-                                fieldWithPath("specialRisksOSS").description("The special risks OSS text of the project"),
-                                fieldWithPath("generalRisks3rdParty").description("The general risks 3rd party text of the project"),
-                                fieldWithPath("specialRisks3rdParty").description("The special risks 3rd party text of the project"),
-                                fieldWithPath("deliveryChannels").description("The sales and delivery channels text of the project"),
-                                fieldWithPath("remarksAdditionalRequirements").description("The remark additional requirements text of the project"),
-                                fieldWithPath("tag").description("The project tag"),
-                                fieldWithPath("deliveryStart").description("The project delivery start date"),
-                                fieldWithPath("preevaluationDeadline").description("The project preevaluation deadline"),
-                                fieldWithPath("systemTestStart").description("Date of the project system begin phase"),
-                                fieldWithPath("systemTestEnd").description("Date of the project system end phase"),
-                                subsectionWithPath("linkedProjects").description("The `linked project id` - metadata of linked projects (`enableSvm` - whether linked projects will be part of SVM, `projectRelationship` - relationship between linked project and the project. Possible values: " + Arrays.asList(ProjectRelationship.values())),
-                                subsectionWithPath("linkedReleases").description("The relationship between linked releases of the project"),
-                                fieldWithPath("securityResponsibles").description("An array of users responsible for security of the project."),
-                                fieldWithPath("projectResponsible").description("A user who is responsible for the project."),
-                                fieldWithPath("enableSvm").description("Security vulnerability monitoring flag"),
-                                fieldWithPath("considerReleasesFromExternalList").description("Consider list of releases from existing external list"),
-                                fieldWithPath("enableVulnerabilitiesDisplay").description("Displaying vulnerabilities flag."),
-                                fieldWithPath("state").description("The project active status, possible values are: " + Arrays.asList(ProjectState.values())),
-                                fieldWithPath("phaseOutSince").description("The project phase-out date"),
-                                fieldWithPath("clearingRequestId").description("Clearing Request id associated with project."),
-                                subsectionWithPath("_links").description("<<resources-index-links,Links>> to other resources"),
-                                subsectionWithPath("_embedded.createdBy").description("The user who created this project"),
-                                subsectionWithPath("_embedded.sw360:projects").description("An array of <<resources-projects, Projects resources>>"),
-                                subsectionWithPath("_embedded.sw360:releases").description("An array of <<resources-releases, Releases resources>>"),
-                                subsectionWithPath("_embedded.sw360:vendors").description("An array of all component vendors with full name and link to their <<resources-vendor-get,Vendor resource>>"),
-                                subsectionWithPath("_embedded.sw360:moderators").description("An array of all project moderators with email and link to their <<resources-user-get,User resource>>"),
-                                subsectionWithPath("_embedded.sw360:attachments").description("An array of all project attachments and link to their <<resources-attachment-get,Attachment resource>>")
-                        )));
+        if (!SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
+            mockMvc.perform(get("/api/projects/" + project.getId())
+                            .header("Authorization", "Bearer " + accessToken)
+                            .accept(MediaTypes.HAL_JSON))
+                    .andExpect(status().isOk())
+                    .andDo(this.documentationHandler.document(
+                            links(
+                                    linkWithRel("self").description("The <<resources-projects,Projects resource>>")
+                            ),
+                            responseFields(
+                                    fieldWithPath("name").description("The name of the project"),
+                                    fieldWithPath("version").description("The project version"),
+                                    fieldWithPath("createdOn").description("The date the project was created"),
+                                    fieldWithPath("description").description("The project description"),
+                                    fieldWithPath("projectType").description("The project type, possible values are: " + Arrays.asList(ProjectType.values())),
+                                    fieldWithPath("domain").description("The domain, possible values are:" + Sw360ResourceServer.DOMAIN.toString()),
+                                    fieldWithPath("visibility").description("The project visibility, possible values are: " + Arrays.asList(Visibility.values())),
+                                    fieldWithPath("businessUnit").description("The business unit this project belongs to"),
+                                    subsectionWithPath("externalIds").description("When projects are imported from other tools, the external ids can be stored here. Store as 'Single String' when single value, or 'Array of String' when multi-values"),
+                                    subsectionWithPath("additionalData").description("A place to store additional data used by external tools"),
+                                    fieldWithPath("ownerAccountingUnit").description("The owner accounting unit of the project"),
+                                    fieldWithPath("ownerGroup").description("The owner group of the project"),
+                                    fieldWithPath("ownerCountry").description("The owner country of the project"),
+                                    fieldWithPath("obligationsText").description("The obligations text of the project"),
+                                    fieldWithPath("clearingSummary").description("The clearing summary text of the project"),
+                                    fieldWithPath("specialRisksOSS").description("The special risks OSS text of the project"),
+                                    fieldWithPath("generalRisks3rdParty").description("The general risks 3rd party text of the project"),
+                                    fieldWithPath("specialRisks3rdParty").description("The special risks 3rd party text of the project"),
+                                    fieldWithPath("deliveryChannels").description("The sales and delivery channels text of the project"),
+                                    fieldWithPath("remarksAdditionalRequirements").description("The remark additional requirements text of the project"),
+                                    fieldWithPath("tag").description("The project tag"),
+                                    fieldWithPath("deliveryStart").description("The project delivery start date"),
+                                    fieldWithPath("preevaluationDeadline").description("The project preevaluation deadline"),
+                                    fieldWithPath("systemTestStart").description("Date of the project system begin phase"),
+                                    fieldWithPath("systemTestEnd").description("Date of the project system end phase"),
+                                    subsectionWithPath("linkedProjects").description("The `linked project id` - metadata of linked projects (`enableSvm` - whether linked projects will be part of SVM, `projectRelationship` - relationship between linked project and the project. Possible values: " + Arrays.asList(ProjectRelationship.values())),
+                                    subsectionWithPath("linkedReleases").description("The relationship between linked releases of the project"),
+                                    fieldWithPath("securityResponsibles").description("An array of users responsible for security of the project."),
+                                    fieldWithPath("projectResponsible").description("A user who is responsible for the project."),
+                                    fieldWithPath("enableSvm").description("Security vulnerability monitoring flag"),
+                                    fieldWithPath("considerReleasesFromExternalList").description("Consider list of releases from existing external list"),
+                                    fieldWithPath("enableVulnerabilitiesDisplay").description("Displaying vulnerabilities flag."),
+                                    fieldWithPath("state").description("The project active status, possible values are: " + Arrays.asList(ProjectState.values())),
+                                    fieldWithPath("phaseOutSince").description("The project phase-out date"),
+                                    fieldWithPath("clearingRequestId").description("Clearing Request id associated with project."),
+                                    subsectionWithPath("_links").description("<<resources-index-links,Links>> to other resources"),
+                                    subsectionWithPath("_embedded.createdBy").description("The user who created this project"),
+                                    subsectionWithPath("_embedded.sw360:projects").description("An array of <<resources-projects, Projects resources>>"),
+                                    subsectionWithPath("_embedded.sw360:releases").description("An array of <<resources-releases, Releases resources>>"),
+                                    subsectionWithPath("_embedded.sw360:vendors").description("An array of all component vendors with full name and link to their <<resources-vendor-get,Vendor resource>>"),
+                                    subsectionWithPath("_embedded.sw360:moderators").description("An array of all project moderators with email and link to their <<resources-user-get,User resource>>"),
+                                    subsectionWithPath("_embedded.sw360:attachments").description("An array of all project attachments and link to their <<resources-attachment-get,Attachment resource>>")
+                            )));
+        } else {
+            mockMvc.perform(get("/api/projects/" + project.getId())
+                            .header("Authorization", "Bearer " + accessToken)
+                            .accept(MediaTypes.HAL_JSON))
+                    .andExpect(status().isOk())
+                    .andDo(this.documentationHandler.document(
+                            links(
+                                    linkWithRel("self").description("The <<resources-projects,Projects resource>>")
+                            ),
+                            responseFields(
+                                    fieldWithPath("name").description("The name of the project"),
+                                    fieldWithPath("version").description("The project version"),
+                                    fieldWithPath("createdOn").description("The date the project was created"),
+                                    fieldWithPath("description").description("The project description"),
+                                    fieldWithPath("projectType").description("The project type, possible values are: " + Arrays.asList(ProjectType.values())),
+                                    fieldWithPath("domain").description("The domain, possible values are:"  + Sw360ResourceServer.DOMAIN.toString()),
+                                    fieldWithPath("visibility").description("The project visibility, possible values are: " + Arrays.asList(Visibility.values())),
+                                    fieldWithPath("businessUnit").description("The business unit this project belongs to"),
+                                    subsectionWithPath("externalIds").description("When projects are imported from other tools, the external ids can be stored here. Store as 'Single String' when single value, or 'Array of String' when multi-values"),
+                                    subsectionWithPath("additionalData").description("A place to store additional data used by external tools"),
+                                    fieldWithPath("ownerAccountingUnit").description("The owner accounting unit of the project"),
+                                    fieldWithPath("ownerGroup").description("The owner group of the project"),
+                                    fieldWithPath("ownerCountry").description("The owner country of the project"),
+                                    fieldWithPath("obligationsText").description("The obligations text of the project"),
+                                    fieldWithPath("clearingSummary").description("The clearing summary text of the project"),
+                                    fieldWithPath("specialRisksOSS").description("The special risks OSS text of the project"),
+                                    fieldWithPath("generalRisks3rdParty").description("The general risks 3rd party text of the project"),
+                                    fieldWithPath("specialRisks3rdParty").description("The special risks 3rd party text of the project"),
+                                    fieldWithPath("deliveryChannels").description("The sales and delivery channels text of the project"),
+                                    fieldWithPath("remarksAdditionalRequirements").description("The remark additional requirements text of the project"),
+                                    fieldWithPath("tag").description("The project tag"),
+                                    fieldWithPath("deliveryStart").description("The project delivery start date"),
+                                    fieldWithPath("preevaluationDeadline").description("The project preevaluation deadline"),
+                                    fieldWithPath("systemTestStart").description("Date of the project system begin phase"),
+                                    fieldWithPath("systemTestEnd").description("Date of the project system end phase"),
+                                    subsectionWithPath("linkedProjects").description("The `linked project id` - metadata of linked projects (`enableSvm` - whether linked projects will be part of SVM, `projectRelationship` - relationship between linked project and the project. Possible values: " + Arrays.asList(ProjectRelationship.values())),
+                                    fieldWithPath("securityResponsibles").description("An array of users responsible for security of the project."),
+                                    fieldWithPath("projectResponsible").description("A user who is responsible for the project."),
+                                    fieldWithPath("enableSvm").description("Security vulnerability monitoring flag"),
+                                    fieldWithPath("considerReleasesFromExternalList").description("Consider list of releases from existing external list"),
+                                    fieldWithPath("enableVulnerabilitiesDisplay").description("Displaying vulnerabilities flag."),
+                                    fieldWithPath("state").description("The project active status, possible values are: " + Arrays.asList(ProjectState.values())),
+                                    fieldWithPath("phaseOutSince").description("The project phase-out date"),
+                                    fieldWithPath("clearingRequestId").description("Clearing Request id associated with project."),
+                                    subsectionWithPath("dependencyNetwork").description("Dependency network of project with release."),
+                                    subsectionWithPath("_links").description("<<resources-index-links,Links>> to other resources"),
+                                    subsectionWithPath("_embedded.createdBy").description("The user who created this project"),
+                                    subsectionWithPath("_embedded.sw360:projectDTOs").description("An array of <<resources-projects, Projects resources>>"),
+                                    subsectionWithPath("_embedded.sw360:vendors").description("An array of all component vendors with full name and link to their <<resources-vendor-get,Vendor resource>>"),
+                                    subsectionWithPath("_embedded.sw360:moderators").description("An array of all project moderators with email and link to their <<resources-user-get,User resource>>"),
+                                    subsectionWithPath("_embedded.sw360:attachments").description("An array of all project attachments and link to their <<resources-attachment-get,Attachment resource>>")
+                            )));
+        }
     }
 
     @Test

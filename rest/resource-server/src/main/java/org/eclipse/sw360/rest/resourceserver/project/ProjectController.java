@@ -11,6 +11,8 @@
  */
 package org.eclipse.sw360.rest.resourceserver.project;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
@@ -47,6 +49,7 @@ import org.eclipse.sw360.datahandler.thrift.attachments.UsageData;
 import org.eclipse.sw360.datahandler.thrift.components.ClearingState;
 import org.eclipse.sw360.datahandler.thrift.components.Release;
 import org.eclipse.sw360.datahandler.thrift.components.ReleaseLink;
+import org.eclipse.sw360.datahandler.thrift.components.ReleaseNode;
 import org.eclipse.sw360.datahandler.thrift.licenseinfo.LicenseInfo;
 import org.eclipse.sw360.datahandler.thrift.licenseinfo.LicenseInfoFile;
 import org.eclipse.sw360.datahandler.thrift.licenseinfo.LicenseInfoParsingResult;
@@ -57,6 +60,7 @@ import org.eclipse.sw360.datahandler.thrift.projects.Project;
 import org.eclipse.sw360.datahandler.thrift.projects.ProjectClearingState;
 import org.eclipse.sw360.datahandler.thrift.projects.ProjectLink;
 import org.eclipse.sw360.datahandler.thrift.projects.ProjectProjectRelationship;
+import org.eclipse.sw360.datahandler.thrift.projects.ProjectDTO;
 import org.eclipse.sw360.datahandler.thrift.users.User;
 import org.eclipse.sw360.datahandler.thrift.vendors.Vendor;
 import org.eclipse.sw360.datahandler.thrift.vulnerabilities.ProjectVulnerabilityRating;
@@ -317,12 +321,16 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
     }
 
     @RequestMapping(value = PROJECTS_URL + "/{id}", method = RequestMethod.GET)
-    public ResponseEntity<EntityModel<Project>> getProject(
+    public ResponseEntity<EntityModel<?>> getProject(
             @PathVariable("id") String id) throws TException {
         User sw360User = restControllerHelper.getSw360UserFromAuthentication();
         Project sw360Project = projectService.getProjectForUserById(id, sw360User);
-        HalResource<Project> userHalResource = createHalProject(sw360Project, sw360User);
-        return new ResponseEntity<>(userHalResource, HttpStatus.OK);
+        if (!SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
+            HalResource<Project> userHalResource = createHalProject(sw360Project, sw360User);
+            return new ResponseEntity<>(userHalResource, HttpStatus.OK);
+        }
+        HalResource<ProjectDTO> projectDTOHalResource = createHalProjectDTO(sw360Project, sw360User);
+        return new ResponseEntity<>(projectDTOHalResource, HttpStatus.OK);
     }
 
     @RequestMapping(value = PROJECTS_URL + "/{id}/linkedProjects", method = RequestMethod.GET)
@@ -1183,5 +1191,58 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
             log.error("Error creating TSerializer " + e);
         }
         return null;
+    }
+
+    private HalResource<ProjectDTO> createHalProjectDTO(Project sw360Project, User sw360User) throws TException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        ProjectDTO projectDTO = objectMapper.convertValue(sw360Project,ProjectDTO.class);
+
+        List<ReleaseNode> dependencyNetwork = new ArrayList<>();
+        if (CommonUtils.isNotNullEmptyOrWhitespace(sw360Project.getReleaseRelationNetwork())) {
+            try {
+                dependencyNetwork = objectMapper.readValue(sw360Project.getReleaseRelationNetwork(), new TypeReference<>() {
+                });
+            } catch (JsonProcessingException e) {
+                log.error(e.getMessage());
+            }
+        }
+        projectDTO.setDependencyNetwork(dependencyNetwork);
+        HalResource<ProjectDTO> halProject = new HalResource<>(projectDTO);
+
+        User projectCreator = restControllerHelper.getUserByEmail(projectDTO.getCreatedBy());
+        restControllerHelper.addEmbeddedUser(halProject, projectCreator, "createdBy");
+
+        Map<String, ProjectProjectRelationship> linkedProjects = projectDTO.getLinkedProjects();
+        if (linkedProjects != null) {
+            restControllerHelper.addEmbeddedProjectDTO(halProject, linkedProjects.keySet(), projectService, sw360User);
+        }
+
+        if (projectDTO.getModerators() != null) {
+            Set<String> moderators = projectDTO.getModerators();
+            restControllerHelper.addEmbeddedModerators(halProject, moderators);
+        }
+
+        if (projectDTO.getAttachments() != null) {
+            restControllerHelper.addEmbeddedAttachments(halProject, projectDTO.getAttachments());
+        }
+
+        if(projectDTO.getLeadArchitect() != null) {
+            restControllerHelper.addEmbeddedLeadArchitect(halProject, projectDTO.getLeadArchitect());
+        }
+
+        if (projectDTO.getContributors() != null) {
+            Set<String> contributors = projectDTO.getContributors();
+            restControllerHelper.addEmbeddedContributors(halProject, contributors);
+        }
+
+        if (projectDTO.getVendor() != null) {
+            Vendor vendor = sw360Project.getVendor();
+            HalResource<Vendor> vendorHalResource = restControllerHelper.addEmbeddedVendor(vendor.getFullname());
+            halProject.addEmbeddedResource("sw360:vendors", vendorHalResource);
+            projectDTO.setVendor(null);
+        }
+
+        return halProject;
     }
 }
