@@ -1295,13 +1295,13 @@ public class ProjectSpecTest extends TestRestDocsSpecBase {
             project.put("linkedReleases", releaseIdToUsage);
         } else {
             List<Map<String, Object>> dependencyNetwork = new ArrayList<>();
-            Map<String, Object> releaseLinkJson = new HashMap<>();
-            releaseLinkJson.put("releaseId", "3765276512");
-            releaseLinkJson.put("comment", "Test Comment");
-            releaseLinkJson.put("releaseRelationship", "CONTAINED");
-            releaseLinkJson.put("mainlineState", "MAINLINE");
-            releaseLinkJson.put("createBy", "admin@sw360.org");
-            dependencyNetwork.add(releaseLinkJson);
+            Map<String, Object> releaseNode = new HashMap<>();
+            releaseNode.put("releaseId", "3765276512");
+            releaseNode.put("comment", "Test Comment");
+            releaseNode.put("releaseRelationship", "CONTAINED");
+            releaseNode.put("mainlineState", "MAINLINE");
+            releaseNode.put("createBy", "admin@sw360.org");
+            dependencyNetwork.add(releaseNode);
             project.put("dependencyNetwork", dependencyNetwork);
         }
         Map<String, ProjectProjectRelationship> linkedProjects = new HashMap<>();
