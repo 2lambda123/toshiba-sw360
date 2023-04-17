@@ -19,6 +19,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.gson.Gson;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang.StringUtils;
@@ -110,11 +111,14 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.InvalidPropertiesFormatException;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -147,6 +151,12 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
             .put(Project._Fields.RELEASE_ID_TO_USAGE, "linkedReleases").build();
     private static final ImmutableMap<String, String> RESPONSE_BODY_FOR_MODERATION_REQUEST = ImmutableMap.<String, String>builder()
             .put("message", "Moderation request is created").build();
+    private static final List<String> enumReleaseRelationshipValues = Stream.of(ReleaseRelationship.values())
+            .map(ReleaseRelationship::name)
+            .collect(Collectors.toList());
+    private static final List<String> enumMainlineStateValues = Stream.of(MainlineState.values())
+            .map(MainlineState::name)
+            .collect(Collectors.toList());
 
     @NonNull
     private final Sw360ProjectService projectService;
@@ -382,28 +392,43 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
     public ResponseEntity createProject(@RequestBody Map<String, Object> reqBodyMap)
             throws URISyntaxException, TException {
         Project project = convertToProject(reqBodyMap);
-        if (project.getReleaseIdToUsage() != null) {
+        if (!SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
+            project.unsetReleaseRelationNetwork();
+            if (project.getReleaseIdToUsage() != null) {
 
-            Map<String, ProjectReleaseRelationship> releaseIdToUsage = new HashMap<>();
-            Map<String, ProjectReleaseRelationship> oriReleaseIdToUsage = project.getReleaseIdToUsage();
-            for (String releaseURIString : oriReleaseIdToUsage.keySet()) {
-                URI releaseURI = new URI(releaseURIString);
-                String path = releaseURI.getPath();
-                String releaseId = path.substring(path.lastIndexOf('/') + 1);
-                releaseIdToUsage.put(releaseId, oriReleaseIdToUsage.get(releaseURIString));
+                Map<String, ProjectReleaseRelationship> releaseIdToUsage = new HashMap<>();
+                Map<String, ProjectReleaseRelationship> oriReleaseIdToUsage = project.getReleaseIdToUsage();
+                for (String releaseURIString : oriReleaseIdToUsage.keySet()) {
+                    URI releaseURI = new URI(releaseURIString);
+                    String path = releaseURI.getPath();
+                    String releaseId = path.substring(path.lastIndexOf('/') + 1);
+                    releaseIdToUsage.put(releaseId, oriReleaseIdToUsage.get(releaseURIString));
+                }
+                project.setReleaseIdToUsage(releaseIdToUsage);
             }
-            project.setReleaseIdToUsage(releaseIdToUsage);
+        } else {
+            project.unsetReleaseIdToUsage();
+            try {
+                addOrPatchDependencyNetworkToProject(project, reqBodyMap, ProjectOperation.CREATE);
+            } catch (JsonProcessingException | NoSuchElementException | InvalidPropertiesFormatException e) {
+                log.error(e.getMessage());
+                return ResponseEntity.badRequest().body(e.getMessage());
+            }
         }
 
         User sw360User = restControllerHelper.getSw360UserFromAuthentication();
         project = projectService.createProject(project, sw360User);
-        HalResource<Project> halResource = createHalProject(project, sw360User);
-
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest().path("/{id}")
                 .buildAndExpand(project.getId()).toUri();
 
-        return ResponseEntity.created(location).body(halResource);
+        if (!SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
+            HalResource<Project> halResource = createHalProject(project, sw360User);
+            return ResponseEntity.created(location).body(halResource);
+        } else {
+            HalResource<ProjectDTO> halResource = createHalProjectDTO(project, sw360User);
+            return ResponseEntity.created(location).body(halResource);
+        }
     }
 
     @PreAuthorize("hasAuthority('WRITE')")
@@ -915,19 +940,38 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
 
     @PreAuthorize("hasAuthority('WRITE')")
     @RequestMapping(value = PROJECTS_URL + "/{id}", method = RequestMethod.PATCH)
-    public ResponseEntity<EntityModel<Project>> patchProject(
+    public ResponseEntity<?> patchProject(
             @PathVariable("id") String id,
             @RequestBody Map<String, Object> reqBodyMap) throws TException {
         User user = restControllerHelper.getSw360UserFromAuthentication();
         Project sw360Project = projectService.getProjectForUserById(id, user);
         Project updateProject = convertToProject(reqBodyMap);
+        if (SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
+            updateProject.unsetReleaseIdToUsage();
+            try {
+                addOrPatchDependencyNetworkToProject(updateProject, reqBodyMap, ProjectOperation.UPDATE);
+            } catch (JsonProcessingException | NoSuchElementException | InvalidPropertiesFormatException e) {
+                log.error(e.getMessage());
+                return ResponseEntity.badRequest().body(e.getMessage());
+            }
+        } else {
+            updateProject.unsetReleaseRelationNetwork();
+        }
         sw360Project = this.restControllerHelper.updateProject(sw360Project, updateProject, reqBodyMap, mapOfProjectFieldsToRequestBody);
+        if (SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP && CommonUtils.isNotNullEmptyOrWhitespace(updateProject.getReleaseRelationNetwork())) {
+            sw360Project.setReleaseRelationNetwork(updateProject.getReleaseRelationNetwork());
+        }
         RequestStatus updateProjectStatus = projectService.updateProject(sw360Project, user);
-        HalResource<Project> userHalResource = createHalProject(sw360Project, user);
         if (updateProjectStatus == RequestStatus.SENT_TO_MODERATOR) {
             return new ResponseEntity(RESPONSE_BODY_FOR_MODERATION_REQUEST, HttpStatus.ACCEPTED);
         }
-        return new ResponseEntity<>(userHalResource, HttpStatus.OK);
+        if (!SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
+            HalResource<Project> userHalResource = createHalProject(sw360Project, user);
+            return new ResponseEntity<>(userHalResource, HttpStatus.OK);
+        } else {
+            HalResource<ProjectDTO> projectDTOHalResource = createHalProjectDTO(sw360Project, user);
+            return new ResponseEntity<>(projectDTOHalResource, HttpStatus.OK);
+        }
     }
 
     @RequestMapping(value = PROJECTS_URL + "/{projectId}/attachments", method = RequestMethod.POST, consumes = {"multipart/mixed", "multipart/form-data"})
@@ -1244,5 +1288,108 @@ public class ProjectController implements RepresentationModelProcessor<Repositor
         }
 
         return halProject;
+    }
+
+    private void addOrPatchDependencyNetworkToProject(Project project, Map<String, Object> requestBody, ProjectOperation operation) throws JsonProcessingException, InvalidPropertiesFormatException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        List<ReleaseNode> releaseNodes = null;
+        String dependencyNetwork = objectMapper.writeValueAsString(requestBody.get("dependencyNetwork"));
+
+        List<ReleaseNode> uniqueDependencyNetwork = new ArrayList<>();
+
+        if (dependencyNetwork != null && !dependencyNetwork.equals("null")) {
+            releaseNodes = objectMapper.readValue(dependencyNetwork, new TypeReference<>() {
+            });
+
+            if (releaseNodes != null) {
+                List<String> releaseWithSameLevel = new ArrayList<>();
+                for (ReleaseNode releaseNode : releaseNodes) {
+                    if (CommonUtils.isNullEmptyOrWhitespace(releaseNode.getReleaseId())) {
+                        throw new InvalidPropertiesFormatException("releaseId cannot be null or empty");
+                    }
+
+                    if (releaseWithSameLevel.contains(releaseNode.getReleaseId())) {
+                        continue;
+                    }
+                    releaseWithSameLevel.add(releaseNode.getReleaseId());
+                    updateReleaseNodeData(releaseNode, operation);
+                    if (releaseNode.getReleaseLink() == null) {
+                        releaseNode.setReleaseLink(Collections.emptyList());
+                    }
+                    else {
+                        List<String> loadedReleases = new ArrayList<>();
+                        loadedReleases.add(releaseNode.getReleaseId());
+                        releaseNode.setReleaseLink(checkAndUpdateSubNodes(releaseNode.getReleaseLink(), operation, loadedReleases));
+                    }
+                    uniqueDependencyNetwork.add(releaseNode);
+                }
+            }
+            project.setReleaseRelationNetwork(new Gson().toJson(uniqueDependencyNetwork));
+        }
+        else {
+            project.setReleaseRelationNetwork(null);
+        }
+    }
+
+    private List<ReleaseNode> checkAndUpdateSubNodes(List<ReleaseNode> releaseNodes, ProjectOperation operation, List<String> loadedReleases) throws InvalidPropertiesFormatException {
+        List<ReleaseNode> uniqueDependencyNetwork = new ArrayList<>();
+        List<String> releaseIdsWithSameLevel = new ArrayList<>();
+        for (ReleaseNode releaseNode : releaseNodes) {
+            if (CommonUtils.isNullEmptyOrWhitespace(releaseNode.getReleaseId())) {
+                throw new InvalidPropertiesFormatException("releaseId cannot be null or empty");
+            }
+
+            if (releaseIdsWithSameLevel.contains(releaseNode.getReleaseId())) {
+                continue;
+            }
+            releaseIdsWithSameLevel.add(releaseNode.getReleaseId());
+
+            if (loadedReleases.contains(releaseNode.getReleaseId())) {
+                loadedReleases.add(releaseNode.getReleaseId());
+                String cyclicHierarchy = String.join(" -> ", loadedReleases);
+                throw new InvalidPropertiesFormatException("Cyclic hierarchy in dependency network: " + cyclicHierarchy);
+            }
+
+            loadedReleases.add(releaseNode.getReleaseId());
+            updateReleaseNodeData(releaseNode, operation);
+            if (releaseNode.getReleaseLink() == null) {
+                releaseNode.setReleaseLink(Collections.emptyList());
+                loadedReleases.remove(loadedReleases.size() - 1);
+            } else {
+                releaseNode.setReleaseLink(checkAndUpdateSubNodes(releaseNode.getReleaseLink(), operation, loadedReleases));
+                loadedReleases.remove(loadedReleases.size() - 1);
+            }
+            uniqueDependencyNetwork.add(releaseNode);
+        }
+        return uniqueDependencyNetwork;
+    }
+
+    private void updateReleaseNodeData(ReleaseNode releaseNode, ProjectOperation operation) {
+        User sw360User = restControllerHelper.getSw360UserFromAuthentication();
+        String mainLineStateUpper = (releaseNode.getMainlineState() != null) ? releaseNode.getMainlineState().toUpperCase() : MainlineState.OPEN.toString();
+        String releaseRelationShipUpper = (releaseNode.getReleaseRelationship() != null) ? releaseNode.getReleaseRelationship().toUpperCase() : ReleaseRelationship.CONTAINED.toString();
+
+        if (!enumMainlineStateValues.contains(mainLineStateUpper)) {
+            throw new NoSuchElementException("mainLineState of release " + releaseNode.getReleaseId() + " must be in Enum " + enumMainlineStateValues);
+        }
+        if (!enumReleaseRelationshipValues.contains(releaseRelationShipUpper)) {
+            throw new NoSuchElementException("releaseRelationShip of release " + releaseNode.getReleaseId() + " must be in Enum " + enumReleaseRelationshipValues);
+        }
+
+        releaseNode.setReleaseRelationship(releaseRelationShipUpper);
+        releaseNode.setMainlineState(mainLineStateUpper);
+
+        if (operation.equals(ProjectOperation.CREATE)) {
+            releaseNode.setCreateOn(SW360Utils.getCreatedOn());
+            releaseNode.setCreateBy(sw360User.getEmail());
+        } else if (operation.equals(ProjectOperation.UPDATE)) {
+            if (CommonUtils.isNullEmptyOrWhitespace(releaseNode.getCreateOn())) {
+                releaseNode.setCreateOn(SW360Utils.getCreatedOn());
+            }
+            if (CommonUtils.isNullEmptyOrWhitespace(releaseNode.getCreateBy())) {
+                releaseNode.setCreateBy(sw360User.getEmail());
+            }
+        }
     }
 }
