@@ -46,9 +46,7 @@
             <th><liferay-ui:message key="release.version" /></th>
             <th><liferay-ui:message key="reload.info" />
                 <span class="sw360-tt sw360-tt-ReloadInfo" data-content="<liferay-ui:message key='load.default.child.releases' />">
-                    <svg class='lexicon-icon'>
-                        <use href='/o/org.eclipse.sw360.liferay-theme/images/clay/icons.svg#info-circle-open' />
-                    </svg>
+                    <svg class='lexicon-icon'> <use href='/o/org.eclipse.sw360.liferay-theme/images/clay/icons.svg#info-circle-open' /></svg>
                 </span>
             </th>
             <th><liferay-ui:message key="release.relation" /> <sw360:DisplayEnumInfo type="<%=ReleaseRelationship.class%>"/></th>
@@ -60,7 +58,6 @@
     <tbody id="tableBody">
     </tbody>
 </table>
-
 <br/>
 <div class="spinner text-center" style="display: none;">
     <div class="spinner-border" role="status">
@@ -75,8 +72,7 @@
 		<div class="modal-dialog modal-lg modal-dialog-centered modal-danger" role="document">
 		    <div class="modal-content">
 			<div class="modal-header">
-				<h5 class="modal-title">
-					<clay:icon symbol="question-circle" />
+				<h5 class="modal-title"><clay:icon symbol="question-circle" />
 					<liferay-ui:message key="delete.link.to.release" />
 				</h5>
 				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -84,9 +80,7 @@
 				</button>
 			</div>
 				<div class="modal-body">
-			        <p>
-                        <liferay-ui:message key="do.you.really.want.to.remove.the.link.to.release.x" />
-                    </p>
+			        <p><liferay-ui:message key="do.you.really.want.to.remove.the.link.to.release.x" /></p>
 				</div>
 			    <div class="modal-footer">
 			        <button type="button" class="btn btn-light" data-dismiss="modal"><liferay-ui:message key="cancel" /></button>
@@ -137,8 +131,7 @@
                                     <th><liferay-ui:message key="mainline.state" /></th>
                                 </tr>
                             </thead>
-                            <tbody>
-                            </tbody>
+                            <tbody></tbody>
                         </table>
                     </div>
                 </form>
@@ -192,8 +185,7 @@
                                     <th><liferay-ui:message key="mainline.state" /></th>
                                 </tr>
                             </thead>
-                            <tbody>
-                            </tbody>
+                            <tbody></tbody>
                         </table>
                     </div>
                 </form>
@@ -214,7 +206,6 @@
             let releaseId = "";
             var releaseWithRelations = ${project.releaseRelationNetwork};
             let projectId = "${project.id}";
-            let layer = 1;
             let releaseWithRelationsString = "[]";
 
             $( document ).ready(async function(event){
@@ -249,17 +240,16 @@
                 let currentIndex = $(this).closest('tr').attr('data-index');
                 let version = $(this).closest('tr').find('select').eq(0).find('option:selected').text().trim();
                 let componentName = $(this).closest('tr').find('td').eq(0).find('div').eq(0).text().trim();
-                let i=0;
                 let trace = [];
                 trace.unshift(currentIndex);
-                for(let layer = currentLayer - 1; layer >= 0; layer-- ) {
+                for (let layer = currentLayer - 1; layer >= 0; layer-- ) {
                       trace.unshift($(this).closest('tr').prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('data-index'));
                       parentNode =  $(this).closest('tr').prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('parent-node');
                 }
                 dialog.open('#deleteReleaseInNetworkDialog', {
                     release: componentName + '(' + version + ')'
                 }, function(submit, callback) {
-                     removeNodeFromNetwork(releaseWithRelations, i, trace);
+                     removeNodeFromNetwork(releaseWithRelations, 0, trace);
                      $('#LinkedReleasesNetwork tbody').empty();
                      $('#releaseRelationTree').val(JSON.stringify(releaseWithRelations));
                      displayReleaseRelationShip();
@@ -285,7 +275,7 @@
                let i=0;
                let trace = [];
                trace.unshift(currentIndex);
-               for(let layer = currentLayer - 1; layer >= 0; layer-- ) {
+               for (let layer = currentLayer - 1; layer >= 0; layer-- ) {
                     trace.unshift($(this).closest('tr').prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('data-index'));
                     parentNode =  $(this).closest('tr').prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('parent-node');
                }
@@ -322,7 +312,7 @@
                releaseIdTrace.push(parentNode);
                $("#formSubmit").prop('disabled', true);
                let messages = [];
-               for(let layer = currentLayer - 1; layer >= 0; layer-- ) {
+               for (let layer = currentLayer - 1; layer >= 0; layer-- ) {
                     trace.unshift($(this).closest('tr').prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('data-index'));
                     parentNode =  $(this).closest('tr').prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('parent-node');
                     releaseIdTrace.push(parentNode);
@@ -372,7 +362,7 @@
                let i=0;
                let trace = [];
                trace.unshift(currentIndex);
-               for(let layer = currentLayer - 1; layer >= 0; layer-- ) {
+               for (let layer = currentLayer - 1; layer >= 0; layer-- ) {
                     trace.unshift($(this).closest('tr').prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('data-index'));
                     parentNode =  $(this).closest('tr').prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('parent-node');
                }
@@ -390,7 +380,7 @@
                let i=0;
                let trace = [];
                trace.unshift(currentIndex);
-               for(let layer = currentLayer - 1; layer >= 0; layer-- ) {
+               for (let layer = currentLayer - 1; layer >= 0; layer-- ) {
                     trace.unshift($(this).closest('tr').prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('data-index'));
                     parentNode =  $(this).closest('tr').prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('parent-node');
                }
@@ -424,12 +414,10 @@
                let parentNode = $(this).closest('tr').attr('parent-node');
                let value = $(this).val();
                let currentIndex = $(this).closest('tr').attr('data-index');
-
                let i=0;
                let trace = [];
                trace.unshift(currentIndex);
-
-               for(let layer = currentLayer - 1; layer >= 0; layer-- ) {
+               for (let layer = currentLayer - 1; layer >= 0; layer-- ) {
                     trace.unshift($(this).closest('tr').prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('data-index'));
                     parentNode = $(this).closest('tr').prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('parent-node');
                }
@@ -538,8 +526,7 @@
                     indexTrace.unshift(currentIndex);
                     releaseTrace.unshift(parentId);
                     hierarchyName.unshift(releaseName + ' (' + releaseVersion + ')');
-
-                    for(let layer = parentLayer - 1; layer >= 0; layer-- ) {
+                    for (let layer = parentLayer - 1; layer >= 0; layer-- ) {
                         indexTrace.unshift(selectedElement.prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('data-index'));
                         releaseName = selectedElement.prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').find('td').eq(0).find('div').text().trim();
                         releaseVersion = selectedElement.prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').find('td').eq(1).text().trim();
@@ -547,6 +534,10 @@
                         hierarchyName.unshift(releaseName + ' (' + releaseVersion + ')');
                         parentNode = selectedElement.prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('parent-node');
                     }
+                    let selectedNode = findChildNodeByIndexTrace(releaseWithRelations, indexTrace, 0);
+                    let indexCurrentRow = $('#LinkedReleasesNetwork tbody tr').index(selectedElement);
+                    let subNodeIds = getSubNodeReleaseIds(selectedNode);
+                    let appendIndex = indexCurrentRow + subNodeIds.length;
                     $('#searchChildResultsTable').find(':checked').each(function () {
                         releaseIds.push(this.value);
                         releaseNames.push($(this).closest('tr').find('td').eq(2).find('a').html() + ' (' + $(this).closest('tr').find('td').eq(3).find('a').html() + ')');
@@ -561,7 +552,6 @@
                     let comments = [];
                     let selectedReleases = [];
                     let releaseDuplicates = [];
-                    let i=0;
                     let messages = [];
                     let indexOfNode = numberOfNodeSameLevel;
                     for (let [index, releaseId] of releaseIds.entries()) {
@@ -604,9 +594,9 @@
                         }
                         indexOfNode += 1;
                     }
-                    addChildNode(releaseWithRelations, i, indexTrace, selectedReleases);
+                    addChildNode(releaseWithRelations, 0, indexTrace, selectedReleases);
                     let releaseRows = await addReleaseToTable('<%=PortalConstants.CREATE_LINKED_RELEASE_ROW%>', canLinkReleases, parentIds, levels, mainlineStates, releaseRelationships, indexOfNodes, comments);
-                    selectedElement.after(releaseRows);
+                    $("#LinkedReleasesNetwork tbody tr:eq(" + appendIndex + ")").after(releaseRows);
                     $('#releaseRelationTree').val(JSON.stringify(releaseWithRelations));
                     if (releaseDuplicates.length > 0) {
                         messages.push('<p>Releases duplicated: <b>' + releaseDuplicates.join(', ') + '</b></p>');
@@ -625,11 +615,10 @@
             $('#searchChildResultsTable').on('change', 'input', function() {
                 $("#searchChildReleaseDialog #selectReleaseButton").attr("disabled", false);
             });
-
             $('#releaseResultsTable').on('change', 'input', function() {
                 $("#searchReleasesDialogOfNetwork #selectReleaseButton").attr("disabled", false);
             });
-            // Search release dialog
+
             keyboard.bindkeyPressToClick('searchReleasesDialogOfNetwork #searchRelease', 'searchReleasesDialogOfNetwork #searchReleaseBtn');
             keyboard.bindkeyPressToClick('searchChildReleaseDialog #searchRelease', 'searchChildReleaseDialog #searchReleaseBtn');
             var homeUrl = themeDisplay.getURLHome().replace(/\/web\//, '/group/');
@@ -651,7 +640,7 @@
 
             $('#searchReleasesDialogOfNetwork').on('click', '#getLinkedReleasesButton', function() {
                 releaseFromAjax('<%=PortalConstants.RELEASE_LIST_FROM_LINKED_PROJECTS%>', '', '#releaseResultsTable', function(data) {
-                    if($dataTable) {
+                    if ($dataTable) {
                         $dataTable.destroy();
                     }
                     $('#releaseResultsTable tbody').html(data);
