@@ -87,7 +87,14 @@
             <div id="detailTab" class="list-group" data-initial-tab="${selectedTab}" role="tablist">
                 <a class="list-group-item list-group-item-action <core_rt:if test="${selectedTab == 'tab-Summary'}">active</core_rt:if>" href="#tab-Summary" data-toggle="list" role="tab"><liferay-ui:message key="summary" /></a>
                 <a class="list-group-item list-group-item-action <core_rt:if test="${selectedTab == 'tab-Administration'}">active</core_rt:if>" href="#tab-Administration" data-toggle="list" role="tab"><liferay-ui:message key="administration" /></a>
-                <a class="list-group-item list-group-item-action <core_rt:if test="${selectedTab == 'tab-linkedProjects'}">active</core_rt:if>" href="#tab-linkedProjects" data-toggle="list" role="tab"><liferay-ui:message key="linked.releases.and.projects" /></a>
+                <a class="list-group-item list-group-item-action <core_rt:if test="${selectedTab == 'tab-linkedProjects'}">active</core_rt:if>" href="#tab-linkedProjects" data-toggle="list" role="tab">
+                    <core_rt:if test="${not isFlexibleProjectReleaseRelationshipEnabled}">
+                        <liferay-ui:message key="linked.releases.and.projects" />
+                    </core_rt:if>
+                    <core_rt:if test="${isFlexibleProjectReleaseRelationshipEnabled}">
+                        <liferay-ui:message key="dependency.network" />
+                    </core_rt:if>
+                </a>
                 <core_rt:if test="${not addMode}" >
                     <a class="list-group-item list-group-item-action <core_rt:if test="${selectedTab == 'tab-Attachments'}">active</core_rt:if>" href="#tab-Attachments" data-toggle="list" role="tab"><liferay-ui:message key="attachments" /></a>
                     <core_rt:if test="${isProjectObligationsEnabled}">

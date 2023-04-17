@@ -976,7 +976,7 @@ public class ComponentPortlet extends FossologyAwarePortlet {
                 if (!SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
                     setUsingDocs(request, user, null, component.getReleaseIds());
                 } else {
-                    setUsingDocsWithFlexibleDependencyNetwork(request, user, null, component.getReleaseIds());
+                    setUsingDocsWithFlexibleDependencyNetwork(request, user,  thriftClients.makeComponentClient(), component.getReleaseIds());
                 }
                 setAttachmentsInRequest(request, component);
                 SessionMessages.add(request, "request_processed", LanguageUtil.get(resourceBundle,"new.component"));
