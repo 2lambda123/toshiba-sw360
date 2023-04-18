@@ -59,7 +59,7 @@
     </tbody>
 </table>
 <br/>
-<div class="spinner text-center" style="display: none;">
+<div class="spinner text-center" id="spinner" style="display: none;">
     <div class="spinner-border" role="status">
         <span class="sr-only"><liferay-ui:message key="loading" /></span>
     </div>
@@ -91,7 +91,7 @@
 	</div>
 </div>
 <div class="dialogs">
-	<div id="searchReleasesDialogOfNetwork" data-title="<liferay-ui:message key="link.releases" />" class="modal fade" tabindex="-1" role="dialog">
+	<div id="searchRootRelease" data-title="<liferay-ui:message key="link.releases" />" class="modal fade" tabindex="-1" role="dialog">
 		<div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
 		    <div class="modal-content">
 			<div class="modal-body container">
@@ -138,7 +138,7 @@
 				</div>
 			    <div class="modal-footer">
 		            <button type="button" class="btn btn-light" data-dismiss="modal"><liferay-ui:message key="close" /></button>
-			        <button id="selectReleaseButton" type="button" class="btn btn-primary" title="<liferay-ui:message key="link.releases" />"><liferay-ui:message key="link.releases" /></button>
+			        <button id="selectRootReleaseBtn" type="button" class="btn btn-primary" title="<liferay-ui:message key="link.releases" />"><liferay-ui:message key="link.releases" /></button>
 			    </div>
 			</div>
 		</div>
@@ -192,7 +192,7 @@
 				</div>
 			    <div class="modal-footer">
 		            <button type="button" class="btn btn-light" data-dismiss="modal"><liferay-ui:message key="close" /></button>
-			        <button id="selectReleaseButton" type="button" class="btn btn-primary" title="<liferay-ui:message key="link.releases" />"><liferay-ui:message key="link.releases" /></button>
+			        <button id="selectChildReleaseBtn" type="button" class="btn btn-primary" title="<liferay-ui:message key="link.releases" />"><liferay-ui:message key="link.releases" /></button>
 			    </div>
 			</div>
 		</div>
@@ -222,47 +222,12 @@
             });
 
             async function displayReleaseRelationShip() {
-                $('.spinner').show();
+                $('#spinner').show();
                 let newRow = await getHtmlRowsFromDependencyNetwork('<%=PortalConstants.GET_HTML_RELEASE_ROWS%>');
                 newRow = newRow.replace(/\s+/g,' ').trim();
                 document.getElementById("tableBody").innerHTML = newRow;
-                $('.spinner').hide();
+                $('#spinner').hide();
             }
-
-            $('.show-alert .close').on('click', function(event) {
-                $('.show-alert').css('display', 'none');
-            });
-
-            $('#LinkedReleasesNetwork').on('click', 'svg[data-row-id]', function(event) {
-                let current = $(this).closest('tr').find('select').eq(0).val();
-                let currentLayer =  $(this).closest('tr').attr('data-layer');
-                let parentNode = $(this).closest('tr').attr('parent-node');
-                let currentIndex = $(this).closest('tr').attr('data-index');
-                let version = $(this).closest('tr').find('select').eq(0).find('option:selected').text().trim();
-                let componentName = $(this).closest('tr').find('td').eq(0).find('div').eq(0).text().trim();
-                let trace = [];
-                trace.unshift(currentIndex);
-                for (let layer = currentLayer - 1; layer >= 0; layer-- ) {
-                      trace.unshift($(this).closest('tr').prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('data-index'));
-                      parentNode =  $(this).closest('tr').prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('parent-node');
-                }
-                dialog.open('#deleteReleaseInNetworkDialog', {
-                    release: componentName + '(' + version + ')'
-                }, function(submit, callback) {
-                     removeNodeFromNetwork(releaseWithRelations, 0, trace);
-                     $('#LinkedReleasesNetwork tbody').empty();
-                     $('#releaseRelationTree').val(JSON.stringify(releaseWithRelations));
-                     displayReleaseRelationShip();
-                     callback(true);
-                });
-            });
-
-            $('#LinkedReleasesNetwork').on('click', '.load-release', displayRelationOfNode);
-            $('#LinkedReleasesNetwork').on('change', '.releaseVersion', changeReleaseIdInNode);
-            $('#LinkedReleasesNetwork').on('change', '.projectReleaseRelation', changeReleaseRelation);
-            $('#LinkedReleasesNetwork').on('change', '.mainlineState', changeMainLineState);
-            $('#LinkedReleasesNetwork').on('focusout', '.releaseComment', changeComment);
-            $('#LinkedReleasesNetwork').on('focus', '.releaseVersion', loadReleasesWithSameComponent);
 
             async function displayRelationOfNode(){
                let newSelect = $(this).closest('tr').find('select').eq(0).val().trim();
@@ -280,7 +245,7 @@
                     parentNode =  $(this).closest('tr').prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('parent-node');
                }
                replaceNode(releaseWithRelations, i, trace, newNode[0], newSelect, oldSelect);
-               $('#LinkedReleasesNetwork tbody').empty();
+               $('#tableBody').empty();
                $('#releaseRelationTree').val(JSON.stringify(releaseWithRelations));
                displayReleaseRelationShip();
             }
@@ -538,10 +503,12 @@
                     let indexCurrentRow = $('#LinkedReleasesNetwork tbody tr').index(selectedElement);
                     let subNodeIds = getSubNodeReleaseIds(selectedNode);
                     let appendIndex = indexCurrentRow + subNodeIds.length;
+
                     $('#searchChildResultsTable').find(':checked').each(function () {
                         releaseIds.push(this.value);
                         releaseNames.push($(this).closest('tr').find('td').eq(2).find('a').html() + ' (' + $(this).closest('tr').find('td').eq(3).find('a').html() + ')');
                     });
+
                     let numberOfNodeSameLevel = $('tr[parent-node="'+parentId+'"][data-layer="'+(parentLayer+1)+'"]').length;
                     let canLinkReleases = [];
                     let parentIds = [];
@@ -608,24 +575,24 @@
                 }, function() {
                     $('#searchChildResultsTable').hide();
                     $('#searchChildReleaseDialog #searchRelease').val('');
-                    $("#searchChildReleaseDialog #selectReleaseButton").attr("disabled", true);
+                    $("#selectChildReleaseBtn").attr("disabled", true);
                 });
             }
 
             $('#searchChildResultsTable').on('change', 'input', function() {
-                $("#searchChildReleaseDialog #selectReleaseButton").attr("disabled", false);
+                $("#selectChildReleaseBtn").attr("disabled", false);
             });
             $('#releaseResultsTable').on('change', 'input', function() {
-                $("#searchReleasesDialogOfNetwork #selectReleaseButton").attr("disabled", false);
+                $("#selectRootReleaseBtn").attr("disabled", false);
             });
 
-            keyboard.bindkeyPressToClick('searchReleasesDialogOfNetwork #searchRelease', 'searchReleasesDialogOfNetwork #searchReleaseBtn');
+            keyboard.bindkeyPressToClick('searchRootRelease #searchRelease', 'searchRootRelease #searchReleaseBtn');
             keyboard.bindkeyPressToClick('searchChildReleaseDialog #searchRelease', 'searchChildReleaseDialog #searchReleaseBtn');
             var homeUrl = themeDisplay.getURLHome().replace(/\/web\//, '/group/');
 
-            $('#searchReleasesDialogOfNetwork').on('click','#searchReleaseBtn', function() {
-                var searchRelease = $('#searchReleasesDialogOfNetwork #searchRelease').val();
-                if ($('#searchReleasesDialogOfNetwork #exactMatchRelease').is(':checked') && !(searchRelease.startsWith("\"") && searchRelease.endsWith("\""))) {
+            $('#searchRootRelease').on('click','#searchReleaseBtn', function() {
+                var searchRelease = $('#searchRootRelease #searchRelease').val();
+                if ($('#searchRootRelease #exactMatchRelease').is(':checked') && !(searchRelease.startsWith("\"") && searchRelease.endsWith("\""))) {
                    searchRelease = '"' + searchRelease + '"';
                 }
                 releaseFromAjax('<%=PortalConstants.RELEASE_SEARCH%>', searchRelease, '#releaseResultsTable', function(data) {
@@ -638,7 +605,7 @@
                 });
             });
 
-            $('#searchReleasesDialogOfNetwork').on('click', '#getLinkedReleasesButton', function() {
+            $('#searchRootRelease').on('click', '#getLinkedReleasesButton', function() {
                 releaseFromAjax('<%=PortalConstants.RELEASE_LIST_FROM_LINKED_PROJECTS%>', '', '#releaseResultsTable', function(data) {
                     if ($dataTable) {
                         $dataTable.destroy();
@@ -673,7 +640,7 @@
                     $dataTable.destroy();
                     $dataTable = undefined;
                 }
-                $releaseDialog = dialog.open('#searchReleasesDialogOfNetwork', {
+                $releaseDialog = dialog.open('#searchRootRelease', {
                 }, async function(submit, callback) {
                     var releaseIds = [];
                     var releaseNames = [];
@@ -730,7 +697,7 @@
                 }, function() {
                     this.$.find('#releaseResultsTable').hide();
                     this.$.find('#searchRelease').val('');
-                    $("#searchReleasesDialogOfNetwork #selectReleaseButton").attr("disabled", true);
+                    $("#selectRootReleaseBtn").attr("disabled", true);
                 });
             }
 
@@ -954,6 +921,7 @@
             }
 
             $("#checkDependency").click(async function() {
+                $("#checkDependency .spinner").show();
                 let currentNetwork = $('#releaseRelationTree').val();
                 let rowsWithDiff = await checkDiffDependencyNetworkAndReleaseRelationship('<%=PortalConstants.CHECK_DIFF_DEPENDENCY_NETWORK_WITH_RELEASES_RELATIONSHIP%>', currentNetwork);
                 resetBackgroundAndTextColor();
@@ -961,6 +929,7 @@
                 for (let indexOfRow of rowsWithDiff) {
                     changeColorOfRow(rows[indexOfRow]);
                 }
+                $("#checkDependency .spinner").hide();
             });
 
             function resetBackgroundAndTextColor() {
@@ -979,7 +948,7 @@
                 }
             }
 
-            function checkDiffDependencyNetworkAndReleaseRelationship(what, currentNetwork){
+            function checkDiffDependencyNetworkAndReleaseRelationship(what, currentNetwork) {
                 return new Promise(function(resolve, reject) {
                     jQuery.ajax({
                         type: 'POST',
@@ -1057,6 +1026,40 @@
                     });
                 });
             }
+
+            $('.show-alert .close').on('click', function(event) {
+                $('.show-alert').css('display', 'none');
+            });
+
+            $('#tableBody').on('click', 'svg[data-row-id]', function(event) {
+                let currentLayer =  $(this).closest('tr').attr('data-layer');
+                let parentNode = $(this).closest('tr').attr('parent-node');
+                let currentIndex = $(this).closest('tr').attr('data-index');
+                let version = $(this).closest('tr').find('select').eq(0).find('option:selected').text().trim();
+                let componentName = $(this).closest('tr').find('td').eq(0).find('div').eq(0).text().trim();
+                let trace = [];
+                trace.unshift(currentIndex);
+                for (let layer = currentLayer - 1; layer >= 0; layer-- ) {
+                      trace.unshift($(this).closest('tr').prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('data-index'));
+                      parentNode =  $(this).closest('tr').prevAll('#releaseLinkRow'+parentNode+'[data-layer="'+layer+'"]').first().attr('parent-node');
+                }
+                dialog.open('#deleteReleaseInNetworkDialog', {
+                    release: componentName + '(' + version + ')'
+                }, function(submit, callback) {
+                     removeNodeFromNetwork(releaseWithRelations, 0, trace);
+                     $('#tableBody').empty();
+                     $('#releaseRelationTree').val(JSON.stringify(releaseWithRelations));
+                     displayReleaseRelationShip();
+                     callback(true);
+                });
+            });
+
+            $('#tableBody').on('click', '.load-release', displayRelationOfNode);
+            $('#tableBody').on('change', '.releaseVersion', changeReleaseIdInNode);
+            $('#tableBody').on('change', '.projectReleaseRelation', changeReleaseRelation);
+            $('#tableBody').on('change', '.mainlineState', changeMainLineState);
+            $('#tableBody').on('focusout', '.releaseComment', changeComment);
+            $('#tableBody').on('focus', '.releaseVersion', loadReleasesWithSameComponent);
         });
     });
 </script>

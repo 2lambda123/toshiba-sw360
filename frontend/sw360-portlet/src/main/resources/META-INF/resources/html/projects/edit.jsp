@@ -131,7 +131,14 @@
                         </div>
                         <core_rt:if test="${isFlexibleProjectReleaseRelationshipEnabled}">
                             <div class="btn-group" role="group">
-                                <button id="checkDependency" type="button" class="btn btn-outline-success"><liferay-ui:message key="check.dependency.network" /></button>
+                                <button id="checkDependency" type="button" class="btn btn-outline-success">
+                                    <liferay-ui:message key="check.dependency.network" />
+                                    <span class="spinner text-center" style="display: none;">
+                                        <div class="spinner-border" role="status" style="height: 20px; width: 20px;" >
+                                            <span class="sr-only"><liferay-ui:message key="loading" /></span>
+                                        </div>
+                                    </span>
+                                </button>
                             </div>
                         </core_rt:if>
                         <div class="list-group-companion" data-belong-to="tab-Obligations">
