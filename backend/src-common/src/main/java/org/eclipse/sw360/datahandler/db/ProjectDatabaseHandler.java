@@ -867,7 +867,7 @@ public class ProjectDatabaseHandler extends AttachmentAwareDatabaseHandler {
                         parentNodeId, visitedIds, maxDepth, user);
             } else {
                 projectLinkOptional = createProjectLinkForDependencyNetwork(entry.getKey(), entry.getValue(),
-                        parentNodeId, visitedIds, maxDepth, user);
+                        parentNodeId, visitedIds, maxDepth, user, true);
             }
             projectLinkOptional.ifPresent(out::add);
         }
@@ -2081,7 +2081,7 @@ public class ProjectDatabaseHandler extends AttachmentAwareDatabaseHandler {
     }
 
     private Optional<ProjectLink> createProjectLinkForDependencyNetwork(String id, ProjectProjectRelationship projectProjectRelationship, String parentNodeId,
-                                                                        Deque<String> visitedIds, int maxDepth, User user) {
+                                                                        Deque<String> visitedIds, int maxDepth, User user, boolean withRelease) {
         ProjectLink projectLink = null;
         if (!visitedIds.contains(id) && (maxDepth < 0 || visitedIds.size() < maxDepth)) {
             visitedIds.push(id);
@@ -2094,20 +2094,24 @@ public class ProjectDatabaseHandler extends AttachmentAwareDatabaseHandler {
             }
             if (project != null) {
                 projectLink = new ProjectLink(id, project.name);
-                if (project.getReleaseRelationNetwork() != null && project.getReleaseRelationNetwork().length() > 0 && (maxDepth < 0 || visitedIds.size() < maxDepth)){
-                    String releaseNetwork = project.getReleaseRelationNetwork();
-                    List<ReleaseNode> listReleaseLinkJson;
-                    List<ReleaseLink> linkedReleases = new ArrayList<>();
-                    try {
-                        listReleaseLinkJson = mapper.readValue(releaseNetwork, new TypeReference<>() {
-                        });
-                        linkedReleases = convertFromReleaseNodeToReleaseLink(listReleaseLinkJson, id, user, "", 0);
-                    } catch (JsonProcessingException e) {
-                        log.error("JsonProcessingException: " + e);
-                    } catch (TException e) {
-                        log.error(e.getMessage());
+                if (withRelease) {
+                    if (project.getReleaseRelationNetwork() != null && project.getReleaseRelationNetwork().length() > 0 && (maxDepth < 0 || visitedIds.size() < maxDepth)) {
+                        String releaseNetwork = project.getReleaseRelationNetwork();
+                        List<ReleaseNode> listReleaseLinkJson;
+                        List<ReleaseLink> linkedReleases = new ArrayList<>();
+                        try {
+                            listReleaseLinkJson = mapper.readValue(releaseNetwork, new TypeReference<>() {
+                            });
+                            linkedReleases = convertFromReleaseNodeToReleaseLink(listReleaseLinkJson, id, user, "", 0);
+                        } catch (JsonProcessingException e) {
+                            log.error("JsonProcessingException: " + e);
+                        } catch (TException e) {
+                            log.error(e.getMessage());
+                        }
+                        projectLink.setLinkedReleases(nullToEmptyList(linkedReleases));
                     }
-                    projectLink.setLinkedReleases(nullToEmptyList(linkedReleases));
+                } else {
+                    projectLink.setLinkedReleases(Collections.emptyList());
                 }
                 projectLink
                         .setNodeId(generateNodeId(id))
@@ -2121,7 +2125,7 @@ public class ProjectDatabaseHandler extends AttachmentAwareDatabaseHandler {
                         .setTreeLevel(visitedIds.size() - 1);
                 if (project.isSetLinkedProjects()) {
                     List<ProjectLink> subprojectLinks = iterateProjectRelationShips(project.getLinkedProjects(),
-                            projectLink.getNodeId(), visitedIds, maxDepth, user);
+                            projectLink.getNodeId(), visitedIds, maxDepth, user, withRelease);
                     projectLink.setSubprojects(subprojectLinks);
                 }
             } else {
@@ -2152,5 +2156,42 @@ public class ProjectDatabaseHandler extends AttachmentAwareDatabaseHandler {
             releaseIdToUsage.put(node.getReleaseId(), projectReleaseRelationship);
         }
         project.setReleaseIdToUsage(releaseIdToUsage);
+    }
+
+    public List<ProjectLink> getLinkedProjectsWithoutReleases(Map<String, ProjectProjectRelationship> relations, boolean depth, User user) {
+        List<ProjectLink> out;
+
+        Deque<String> visitedIds = new ArrayDeque<>();
+        out = iterateProjectRelationShips(relations, null, visitedIds, depth ? -1 : 1, user, false);
+
+        return out;
+    }
+
+    private List<ProjectLink> iterateProjectRelationShips(Map<String, ProjectProjectRelationship> relations,
+                                                          String parentNodeId, Deque<String> visitedIds, int maxDepth,
+                                                          User user, boolean withRelease) {
+        List<ProjectLink> out = new ArrayList<>();
+        for (Map.Entry<String, ProjectProjectRelationship> entry : relations.entrySet()) {
+            Optional<ProjectLink> projectLinkOptional;
+            if (!SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
+                projectLinkOptional = createProjectLink(entry.getKey(), entry.getValue(),
+                        parentNodeId, visitedIds, maxDepth, user);
+            } else {
+                projectLinkOptional = createProjectLinkForDependencyNetwork(entry.getKey(), entry.getValue(),
+                        parentNodeId, visitedIds, maxDepth, user, withRelease);
+            }
+            projectLinkOptional.ifPresent(out::add);
+        }
+        out.sort(Comparator.comparing(ProjectLink::getName).thenComparing(ProjectLink::getVersion));
+        return out;
+    }
+
+    public List<ProjectLink> getLinkedProjectsWithoutReleases(Project project, boolean deep, User user) {
+        Deque<String> visitedIds = new ArrayDeque<>();
+
+        Map<String, ProjectProjectRelationship> fakeRelations = new HashMap<>();
+        fakeRelations.put(project.isSetId() ? project.getId() : DUMMY_NEW_PROJECT_ID, new ProjectProjectRelationship(ProjectRelationship.UNKNOWN));
+        List<ProjectLink> out = iterateProjectRelationShips(fakeRelations, null, visitedIds, deep ? -1 : 2, user, false);
+        return out;
     }
 }

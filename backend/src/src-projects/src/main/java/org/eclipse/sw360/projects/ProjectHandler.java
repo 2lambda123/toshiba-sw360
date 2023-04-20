@@ -483,7 +483,21 @@ public class ProjectHandler implements ProjectService.Iface {
     }
 
     @Override
-    public List<Project> refineSearchWithoutUser(String text, Map<String, Set<String>> subQueryRestrictions) throws TException {
+    public List<Project> refineSearchWithoutUser(String text, Map<String, Set<String>> subQueryRestrictions) {
         return searchHandler.search(text, subQueryRestrictions);
+    }
+
+    @Override
+    public List<ProjectLink> getLinkedProjectsWithoutReleases(Map<String, ProjectProjectRelationship> relations, boolean depth, User user) throws TException {
+        assertNotNull(relations);
+        assertUser(user);
+
+        return handler.getLinkedProjectsWithoutReleases(relations, depth, user);
+    }
+
+    @Override
+    public List<ProjectLink> getLinkedProjectsOfProjectWithoutReleases(Project project, boolean deep, User user) throws TException {
+        assertNotNull(project);
+        return handler.getLinkedProjectsWithoutReleases(project, deep, user);
     }
 }

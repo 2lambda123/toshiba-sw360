@@ -102,7 +102,7 @@ public class ProjectSearchHandler {
         return connector.searchView(Project.class, luceneSearchView, prepareWildcardQuery(searchText));
     }
 
-    public List<Project> search(String text, final Map<String , Set<String > > subQueryRestrictions){
+    public List<Project> search(String text, final Map<String , Set<String>> subQueryRestrictions) {
         return connector.searchViewWithRestrictions(Project.class, luceneSearchView, text, subQueryRestrictions);
     }
 
@@ -132,9 +132,4 @@ public class ProjectSearchHandler {
         filterMap.put(Project._Fields.RELEASE_RELATION_NETWORK.getFieldName(), values);
         return filterMap;
     }
-
-    public Set<Project> searchByReleaseId(String id) {
-        return searchByReleaseId(id, null);
-    }
-
 }

@@ -189,7 +189,12 @@ public abstract class LinkedReleasesAndProjectsAwarePortlet extends AttachmentAw
     }
 
     protected void putDirectlyLinkedProjectsInRequest(PortletRequest request, Project project, User user) {
-        final Collection<ProjectLink> linkedProjects = SW360Utils.getLinkedProjects(project, false, thriftClients, log, user);
+        Collection<ProjectLink> linkedProjects;
+        if (!SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
+            linkedProjects = SW360Utils.getLinkedProjects(project, false, thriftClients, log, user);
+        } else {
+            linkedProjects = SW360Utils.getLinkedProjectWithoutReleases(project, false, thriftClients, log, user);
+        }
         List<ProjectLink> secondLevelLinks = linkedProjects
                 .stream()
                 .map(ProjectLink::getSubprojects)

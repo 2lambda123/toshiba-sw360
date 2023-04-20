@@ -843,4 +843,16 @@ public class SW360Utils {
         filterMap.put(Project._Fields.RELEASE_RELATION_NETWORK.getFieldName(), values);
         return filterMap;
     }
+
+    public static Collection<ProjectLink> getLinkedProjectWithoutReleases(Project project, boolean deep, ThriftClients thriftClients, Logger log, User user) {
+        if (project != null) {
+            try {
+                ProjectService.Iface client = thriftClients.makeProjectClient();
+                return client.getLinkedProjectsOfProjectWithoutReleases(project, deep, user);
+            } catch (TException e) {
+                log.error("Could not get linked projects", e);
+            }
+        }
+        return Collections.emptyList();
+    }
 }

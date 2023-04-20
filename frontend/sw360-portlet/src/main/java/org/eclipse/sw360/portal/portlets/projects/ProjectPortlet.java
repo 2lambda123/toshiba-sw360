@@ -2361,7 +2361,11 @@ public class ProjectPortlet extends FossologyAwarePortlet {
             setAttachmentsInRequest(request, project);
             try {
                 if (isUpdateOrCreateProjectFailed && project.isSetLinkedProjects()) {
-                    projectlink = client.getLinkedProjects(project.getLinkedProjects(), false, user);
+                    if (!SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
+                        projectlink = client.getLinkedProjects(project.getLinkedProjects(), false, user);
+                    } else {
+                        projectlink = client.getLinkedProjectsWithoutReleases(project.getLinkedProjects(), false, user);
+                    }
                     request.setAttribute(PROJECT_LIST, projectlink);
                 } else {
                     putDirectlyLinkedProjectsInRequest(request, project, user);
@@ -2391,7 +2395,11 @@ public class ProjectPortlet extends FossologyAwarePortlet {
             setAttachmentsInRequest(request, project);
             try {
                 if (project.isSetLinkedProjects()) {
-                    projectlink = client.getLinkedProjects(project.getLinkedProjects(), false, user);
+                    if (!SW360Constants.ENABLE_FLEXIBLE_PROJECT_RELEASE_RELATIONSHIP) {
+                        projectlink = client.getLinkedProjects(project.getLinkedProjects(), false, user);
+                    } else {
+                        projectlink = client.getLinkedProjectsWithoutReleases(project.getLinkedProjects(), false, user);
+                    }
                 }
                 request.setAttribute(PROJECT_LIST, projectlink);
                 putDirectlyLinkedReleasesWithAccessibilityInRequest(request, project, user);

@@ -628,4 +628,21 @@ service ProjectService {
      * returns a list of projects which match `text` and the `subQueryRestrictions`
      */
     list<Project> refineSearchWithoutUser(1: string text, 2: map<string,set<string>>  subQueryRestrictions);
+
+    /**
+     * get a list of project links from keys of map `relations`
+     * do not get linked releases
+     */
+    list<ProjectLink> getLinkedProjectsWithoutReleases(1:  map<string, ProjectProjectRelationship> relations, 2: bool depth, 3: User user);
+
+    /**
+     * get a list of project links of the project
+     * The returned list contains one element and its pointing to the original linking project.
+     * This not allows returning linked releases of the original project at the same time.
+     * If parameter `deep` is false, then the links are loaded only one level deep.
+     * That is, the project links referenced by the top project link
+     * do not have any release links or their subprojects loaded.
+     */
+    list<ProjectLink> getLinkedProjectsOfProjectWithoutReleases(1: Project project, 2: bool deep, 3: User user);
+
 }
