@@ -265,7 +265,7 @@ struct ProjectDTO{
     11: optional string createdOn, // Creation date YYYY-MM-dd
     12: optional string businessUnit,
     13: optional ProjectState state = ProjectState.ACTIVE,
-    15: optional ProjectType projectType = ProjectType.CUSTOMER,
+    15: optional ProjectType projectType = ProjectType.PRODUCT,
     16: optional string tag,// user defined tags
     17: optional ProjectClearingState clearingState,
 
