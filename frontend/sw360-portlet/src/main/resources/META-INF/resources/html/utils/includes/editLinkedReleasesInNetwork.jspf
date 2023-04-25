@@ -855,13 +855,6 @@
                 return false;
             }
 
-            function checkCyclicHierarchy(releaseTrace, releaseId) {
-                if (releaseTrace.includes(releaseId)) {
-                    return true;
-                }
-                return false;
-            }
-
             async function loadReleasesWithSameComponent() {
                 let options = $(this).find('option');
                 let selectedRelease = $(this).val().trim();

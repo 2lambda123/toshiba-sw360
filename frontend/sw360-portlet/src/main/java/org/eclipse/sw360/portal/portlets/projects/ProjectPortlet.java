@@ -3500,60 +3500,7 @@ public class ProjectPortlet extends FossologyAwarePortlet {
                         releaseRelationshipMap.put(childReleaseIds[j], ReleaseRelationship.CONTAINED);
                         releaseById.setReleaseIdToRelationship(releaseRelationshipMap);
                         String cyclicLinkedReleasePath = releaseClient.getCyclicLinkedReleasePath(releaseById, user);
-                        if (!cyclicLinkedReleasePath.equals("")) {
-                            boolean foundCyclicPath = false;
-
-                            if (childReleaseIds.length == 1) {
-                                List<String> traceToChildRelease = new ArrayList<>();
-                                traceToChildRelease.addAll(Arrays.asList(releaseIds).subList(0, i+1));
-                                Collections.reverse(traceToChildRelease);
-                                List<String> idsToReleaseNameVersions = new ArrayList<>();
-                                traceToChildRelease.stream().forEach(releaseId -> {
-                                    Release release = idsToReleaseMap.get(releaseId);
-                                    try {
-                                        if (releaseClient.isReleaseActionAllowed(release, user, RequestedAction.READ)) {
-                                            idsToReleaseNameVersions.add(SW360Utils.printName(idsToReleaseMap.get(releaseId)));
-                                        } else {
-                                            idsToReleaseNameVersions.add(PortalConstants.RESTRICTED_RELEASE);
-                                        }
-                                    } catch (TException e) {
-                                        log.error(e.getMessage());
-                                    }
-                                });
-
-                                String[] cyclicLinkedReleases = cyclicLinkedReleasePath.split(" -> ");
-                                List<String> cyclicList = new ArrayList<>();
-                                cyclicList.addAll(idsToReleaseNameVersions);
-                                cyclicList.addAll(Arrays.asList(cyclicLinkedReleases).subList(1, cyclicLinkedReleases.length));
-                                String cyclicPath = cyclicList.stream().collect(Collectors.joining(" -> "));
-                                hierarchiesPath.add(cyclicPath);
-                                foundCyclicPath = true;
-                            }
-
-                            if (!foundCyclicPath) {
-                                List<String> traceToChildRelease = Arrays.asList(childReleaseIds).subList(0, j + 1);
-                                List<String> idsToReleaseNameVersions = new ArrayList<>();
-                                traceToChildRelease.stream().forEach(releaseId -> {
-                                    Release release = idsToReleaseMap.get(releaseId);
-                                    try {
-                                        if (releaseClient.isReleaseActionAllowed(release, user, RequestedAction.READ)) {
-                                            idsToReleaseNameVersions.add(SW360Utils.printName(idsToReleaseMap.get(releaseId)));
-                                        } else {
-                                            idsToReleaseNameVersions.add(PortalConstants.RESTRICTED_RELEASE);
-                                        }
-                                    } catch (TException e) {
-                                        log.error(e.getMessage());
-                                    }
-                                });
-                                String[] cyclicLinkedReleases = cyclicLinkedReleasePath.split(" -> ");
-                                List<String> cyclicList = new ArrayList<>();
-                                cyclicList.add(SW360Utils.printName(idsToReleaseMap.get(releaseIds[i])));
-                                cyclicList.addAll(idsToReleaseNameVersions);
-                                cyclicList.addAll(Arrays.asList(cyclicLinkedReleases).subList(2, cyclicLinkedReleases.length));
-                                String cyclicPath = cyclicList.stream().collect(Collectors.joining(" -> "));
-                                hierarchiesPath.add(cyclicPath);
-                            }
-                        }
+                        hierarchiesPath.add(cyclicLinkedReleasePath);
                     }
                 }
                 result.put("data", hierarchiesPath);
