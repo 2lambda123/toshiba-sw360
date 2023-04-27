@@ -269,7 +269,7 @@
                let parentNode = $(this).closest('tr').attr('parent-node');
                let currentIndex = $(this).closest('tr').attr('data-index');
                let version = $(this).closest('tr').find('select').eq(0).find('option:selected').text();
-               let componentName = $(this).closest('tr').find('td').eq(0).find('div').eq(0).text().trim();
+               let componentName = $(this).closest('tr').find('td').eq(0).find('div').eq(0).find('div').eq(0).text().trim();
                let i=0;
                let trace = [];
                trace.unshift(currentIndex);
