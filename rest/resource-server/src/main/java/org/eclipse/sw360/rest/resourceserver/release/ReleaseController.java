@@ -25,6 +25,7 @@ import org.eclipse.sw360.datahandler.thrift.ReleaseRelationship;
 import org.eclipse.sw360.datahandler.thrift.RequestStatus;
 import org.eclipse.sw360.datahandler.thrift.Source;
 import org.eclipse.sw360.datahandler.thrift.attachments.Attachment;
+import org.eclipse.sw360.datahandler.thrift.components.EccInformation;
 import org.eclipse.sw360.datahandler.thrift.components.Release;
 import org.eclipse.sw360.datahandler.thrift.projects.Project;
 import org.eclipse.sw360.datahandler.thrift.components.Component;
@@ -569,6 +570,15 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
         });
 
         return release;
+    }
+
+    @GetMapping(value = RELEASES_URL + "/{id}/eccInformation")
+    public ResponseEntity<EntityModel<EccInformation>> getReleaseECCInformation(
+            @PathVariable("id") String id) throws TException {
+        final User sw360User = restControllerHelper.getSw360UserFromAuthentication();
+        final EccInformation eccInformation = releaseService.getECCInformationByReleaseId(id, sw360User);
+        final EntityModel<EccInformation> eccInformationResource = EntityModel.of(eccInformation);
+        return new ResponseEntity<>(eccInformationResource, HttpStatus.OK);
     }
 }
 

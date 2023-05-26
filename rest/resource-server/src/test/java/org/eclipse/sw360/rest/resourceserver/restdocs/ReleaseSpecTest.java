@@ -15,20 +15,11 @@ import org.eclipse.sw360.datahandler.common.SW360Utils;
 import org.eclipse.sw360.datahandler.thrift.*;
 import org.eclipse.sw360.datahandler.thrift.attachments.AttachmentType;
 import org.eclipse.sw360.datahandler.thrift.attachments.CheckStatus;
+import org.eclipse.sw360.datahandler.thrift.components.*;
 import org.eclipse.sw360.datahandler.thrift.vulnerabilities.*;
 import org.eclipse.sw360.rest.resourceserver.attachment.AttachmentInfo;
 import org.eclipse.sw360.datahandler.thrift.attachments.Attachment;
 import org.eclipse.sw360.datahandler.thrift.attachments.AttachmentContent;
-import org.eclipse.sw360.datahandler.thrift.components.COTSDetails;
-import org.eclipse.sw360.datahandler.thrift.components.ClearingInformation;
-import org.eclipse.sw360.datahandler.thrift.components.ClearingState;
-import org.eclipse.sw360.datahandler.thrift.components.Component;
-import org.eclipse.sw360.datahandler.thrift.components.ComponentType;
-import org.eclipse.sw360.datahandler.thrift.components.ExternalTool;
-import org.eclipse.sw360.datahandler.thrift.components.ExternalToolProcess;
-import org.eclipse.sw360.datahandler.thrift.components.ExternalToolProcessStatus;
-import org.eclipse.sw360.datahandler.thrift.components.ExternalToolProcessStep;
-import org.eclipse.sw360.datahandler.thrift.components.Release;
 import org.eclipse.sw360.datahandler.thrift.licenses.License;
 import org.eclipse.sw360.datahandler.thrift.projects.Project;
 import org.eclipse.sw360.datahandler.thrift.projects.ProjectType;
@@ -245,6 +236,20 @@ public class ReleaseSpecTest extends TestRestDocsSpecBase {
         attachment3.setAttachmentContentId("34535345");
         attachment3.setAttachmentType(AttachmentType.SOURCE);
         release3.setAttachments(ImmutableSet.of(attachment3));
+
+        EccInformation eccInformation = new EccInformation();
+        eccInformation.setAl("AL");
+        eccInformation.setEccn("ECCN");
+        eccInformation.setAssessorContactPerson("admin@sw360.org");
+        eccInformation.setAssessorDepartment("DEPARTMENT");
+        eccInformation.setEccComment("Set ECC");
+        eccInformation.setMaterialIndexNumber("12");
+        eccInformation.setAssessmentDate("2023-05-26");
+        eccInformation.setEccStatus(ECCStatus.APPROVED);
+        release3.setEccInformation(eccInformation);
+
+        given(this.releaseServiceMock.getReleaseForUserById(any(), any())).willReturn(release3);
+        given(this.releaseServiceMock.getECCInformationByReleaseId(any(),any())).willReturn(eccInformation);
 
         Set<Project> projectList = new HashSet<>();
         project = new Project();
@@ -552,6 +557,26 @@ public class ReleaseSpecTest extends TestRestDocsSpecBase {
                                 subsectionWithPath("_embedded.sw360:moderators").description("An array of all release moderators with email and link to their <<resources-user-get,User resource>>"),
                                 subsectionWithPath("_embedded.sw360:attachments").description("An array of all release attachments and link to their <<resources-attachment-get,Attachment resource>>"),
                                 subsectionWithPath("_links").description("<<resources-index-links,Links>> to other resources")
+                        )));
+    }
+
+    @Test
+    public void should_document_get_release_ecc_information() throws Exception {
+        String accessToken = TestHelper.getAccessToken(mockMvc, testUserId, testUserPassword);
+        mockMvc.perform(get("/api/releases/" + release3.getId() + "/eccInformation")
+                .header("Authorization", "Bearer " + accessToken)
+                .accept(MediaTypes.HAL_JSON))
+                .andExpect(status().isOk())
+                .andDo(this.documentationHandler.document(
+                        responseFields(
+                                fieldWithPath("al").description("The al of ECC Information"),
+                                fieldWithPath("eccn").description("The eccn of ECC Information"),
+                                fieldWithPath("assessorContactPerson").description("The assessorContactPerson of ECC Information"),
+                                fieldWithPath("assessorDepartment").description("The assessorDepartment of ECC Information"),
+                                fieldWithPath("eccComment").description("The eccComment of ECC Information "+ Arrays.asList(ECCStatus.values())),
+                                fieldWithPath("materialIndexNumber").description("The materialIndexNumber of ECC Information"),
+                                fieldWithPath("assessmentDate").description("The assessmentDate of ECC Information"),
+                                fieldWithPath("eccStatus").description("The eccStatus of ECC Information")
                         )));
     }
 

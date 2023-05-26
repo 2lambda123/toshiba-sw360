@@ -912,11 +912,6 @@ public class JacksonCustomizations {
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         @JsonIgnoreProperties({
-                "assessorContactPerson",
-                "assessorDepartment",
-                "eccComment",
-                "materialIndexNumber",
-                "assessmentDate",
                 "setEccComment",
                 "setEccn",
                 "setEccStatus",
