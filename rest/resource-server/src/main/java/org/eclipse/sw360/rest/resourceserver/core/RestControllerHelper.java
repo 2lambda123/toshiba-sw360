@@ -670,6 +670,8 @@ public class RestControllerHelper<T> {
         attachmentDTO.setCheckedComment(attachment.getCheckedComment());
         attachmentDTO.setCheckedOn(attachment.getCheckedOn());
         attachmentDTO.setCheckStatus(attachment.getCheckStatus());
+        attachmentDTO.setSuperAttachmentId(attachment.getSuperAttachmentId());
+        attachmentDTO.setSuperAttachmentFilename(attachment.getSuperAttachmentFilename());
         attachmentDTO.setUsageAttachment(usage);
 
         return attachmentDTO;
