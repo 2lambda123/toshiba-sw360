@@ -25,6 +25,7 @@ import org.eclipse.sw360.datahandler.resourcelists.PaginationResult;
 import org.eclipse.sw360.datahandler.resourcelists.ResourceClassNotFoundException;
 import org.eclipse.sw360.datahandler.thrift.*;
 import org.eclipse.sw360.datahandler.thrift.attachments.Attachment;
+import org.eclipse.sw360.datahandler.thrift.components.EccInformation;
 import org.eclipse.sw360.datahandler.thrift.components.Release;
 import org.eclipse.sw360.datahandler.thrift.projects.Project;
 import org.eclipse.sw360.datahandler.thrift.components.Component;
@@ -578,6 +579,54 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
             return new ResponseEntity(RESPONSE_BODY_FOR_MODERATION_REQUEST, HttpStatus.ACCEPTED);
         }
         return new ResponseEntity<>(HttpStatus.CREATED);
+    }
+
+    @PreAuthorize("hasAuthority('WRITE')")
+    @RequestMapping(value = RELEASES_URL + "/{id}/eccInformation", method = RequestMethod.PATCH)
+    public ResponseEntity updateEccInformationToRelease(
+            @PathVariable("id") String id,
+            @RequestBody EccInformation eccInformationRequest) throws TException {
+        User sw360User = restControllerHelper.getSw360UserFromAuthentication();
+        Release sw360Release = releaseService.getReleaseForUserById(id, sw360User);
+        EccInformation eccInformation = sw360Release.getEccInformation();
+
+        if (validateECCInformationRequest(eccInformationRequest)) {
+            throw new HttpMessageNotReadableException("Input data can not empty!");
+        }
+
+        if (CommonUtils.isNullEmptyOrWhitespace(eccInformation.getAssessmentDate())) {
+            return new ResponseEntity<>("Ecc Information don't existed in Release", HttpStatus.NOT_FOUND);
+        }
+
+        EccInformation eccInformationUpdate = updateEccInformationToRelease(eccInformation, eccInformationRequest, sw360User);
+        sw360Release.setEccInformation(eccInformationUpdate);
+
+        RequestStatus updateReleaseStatus = releaseService.updateRelease(sw360Release, sw360User);
+        if (updateReleaseStatus == RequestStatus.SENT_TO_MODERATOR) {
+            return new ResponseEntity(RESPONSE_BODY_FOR_MODERATION_REQUEST, HttpStatus.ACCEPTED);
+        }
+        return new ResponseEntity<>(eccInformationUpdate,HttpStatus.OK);
+    }
+
+    private boolean validateECCInformationRequest(EccInformation eccInformation) {
+        return CommonUtils.isNullEmptyOrWhitespace(eccInformation.getEccComment()) &&
+                CommonUtils.isNullEmptyOrWhitespace(eccInformation.getAl()) &&
+                CommonUtils.isNullEmptyOrWhitespace(eccInformation.getMaterialIndexNumber()) &&
+                CommonUtils.isNullEmptyOrWhitespace(eccInformation.getEccn());
+    }
+
+    private EccInformation updateEccInformationToRelease(EccInformation eccInformation, EccInformation eccInformationRequest, User user) {
+
+        eccInformation.setEccStatus(eccInformationRequest.getEccStatus());
+        eccInformation.setEccComment(eccInformationRequest.getEccComment());
+        eccInformation.setEccn(eccInformationRequest.getEccn());
+        eccInformation.setAl(eccInformationRequest.getAl());
+        eccInformation.setMaterialIndexNumber(eccInformationRequest.getMaterialIndexNumber());
+        eccInformation.setAssessmentDate(SW360Utils.getCreatedOn());
+        eccInformation.setAssessorDepartment(user.getDepartment());
+        eccInformation.setAssessorContactPerson(user.getEmail());
+
+        return eccInformation;
     }
 
     @Override
