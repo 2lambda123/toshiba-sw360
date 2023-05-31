@@ -443,3 +443,24 @@ include::{snippets}/should_document_update_release_vulnerabilities/http-response
 
 ===== Links
 include::{snippets}/should_document_update_release_vulnerabilities/links.adoc[]
+
+[[resources-release-add-ECC-Information]]
+==== Listing releases add ECC Information
+
+A `POST` request will add ECC Information of Release
+
+===== Response structure
+
+include::{snippets}/should_document_add_release_ecc_information/response-fields.adoc[]
+
+===== Example request
+
+include::{snippets}/should_document_add_release_ecc_information/curl-request.adoc[]
+
+===== Example response
+
+include::{snippets}/should_document_add_release_ecc_information/http-response.adoc[]
+
+===== Links
+
+include::{snippets}/should_document_add_release_ecc_information/links.adoc[]
