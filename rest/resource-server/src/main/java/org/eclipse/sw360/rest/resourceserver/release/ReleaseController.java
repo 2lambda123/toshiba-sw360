@@ -26,6 +26,7 @@ import org.eclipse.sw360.datahandler.resourcelists.ResourceClassNotFoundExceptio
 import org.eclipse.sw360.datahandler.thrift.*;
 import org.eclipse.sw360.datahandler.thrift.attachments.Attachment;
 import org.eclipse.sw360.datahandler.thrift.components.Release;
+import org.eclipse.sw360.datahandler.thrift.components.ReleaseLink;
 import org.eclipse.sw360.datahandler.thrift.projects.Project;
 import org.eclipse.sw360.datahandler.thrift.components.Component;
 import org.eclipse.sw360.datahandler.thrift.components.ExternalToolProcess;
@@ -171,13 +172,9 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
         User sw360User = restControllerHelper.getSw360UserFromAuthentication();
         Release sw360Release = releaseService.getReleaseForUserById(id, sw360User);
         HalResource halRelease = createHalReleaseResource(sw360Release, true);
-        Map<String, ReleaseRelationship> releaseIdToRelationship = sw360Release.getReleaseIdToRelationship();
-        if (releaseIdToRelationship != null) {
-            List<Release> listOfLinkedRelease = releaseIdToRelationship.keySet().stream()
-                    .map(linkedReleaseId -> wrapTException(
-                            () -> releaseService.getReleaseForUserById(linkedReleaseId, sw360User)))
-                    .collect(Collectors.toList());
-            restControllerHelper.addEmbeddedReleases(halRelease, listOfLinkedRelease);
+        List<ReleaseLink> linkedReleaseRelations = releaseService.getLinkedReleaseRelations(sw360Release, sw360User);
+        if (linkedReleaseRelations != null) {
+            restControllerHelper.addEmbeddedReleaseLinks(halRelease, linkedReleaseRelations);
         }
         return new ResponseEntity<>(halRelease, HttpStatus.OK);
     }

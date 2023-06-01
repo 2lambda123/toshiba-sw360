@@ -34,6 +34,7 @@ import org.eclipse.sw360.datahandler.thrift.attachments.Attachment;
 import org.eclipse.sw360.datahandler.thrift.components.Component;
 import org.eclipse.sw360.datahandler.thrift.components.ComponentService;
 import org.eclipse.sw360.datahandler.thrift.components.Release;
+import org.eclipse.sw360.datahandler.thrift.components.ReleaseLink;
 import org.eclipse.sw360.datahandler.thrift.licenses.License;
 import org.eclipse.sw360.datahandler.thrift.licenses.Obligation;
 import org.eclipse.sw360.datahandler.thrift.moderation.ModerationRequest;
@@ -98,6 +99,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static org.eclipse.sw360.datahandler.common.CommonUtils.isNullEmptyOrWhitespace;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
@@ -315,6 +317,15 @@ public class RestControllerHelper<T> {
         }
     }
 
+    public void addEmbeddedReleaseLinks(
+            HalResource halResource,
+            List<ReleaseLink> releaseLinks) {
+        List<ReleaseLink> releaseLinkInogreAttachment = releaseLinks.stream().map(releaseLink -> releaseLink.setAttachments(null)).collect(Collectors.toList());
+        for (ReleaseLink releaseLink : releaseLinkInogreAttachment) {
+            addEmbeddedReleaseLink(halResource, releaseLink);
+        }
+    }
+
     public void addEmbeddedUser(HalResource halResource, User user, String relation) {
         User embeddedUser = convertToEmbeddedUser(user);
         EntityModel<User> embeddedUserResource = EntityModel.of(embeddedUser);
@@ -391,6 +402,11 @@ public class RestControllerHelper<T> {
                 slash("api/releases/" + release.getId()).withSelfRel();
         halRelease.add(releaseLink);
         halResource.addEmbeddedResource("sw360:releases", halRelease);
+    }
+
+    public void addEmbeddedReleaseLink(HalResource halResource, ReleaseLink releaseLink) {
+        HalResource<ReleaseLink> halRelease = new HalResource<>(releaseLink);
+        halResource.addEmbeddedResource("sw360:releaseLinks", halRelease);
     }
 
     public void addEmbeddedAttachments(
