@@ -153,7 +153,7 @@ public class ComponentPortlet extends FossologyAwarePortlet {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private int nodeIdCounter = 0;
-    
+
     private boolean typeIsComponent(String documentType) {
         return SW360Constants.TYPE_COMPONENT.equals(documentType);
     }
@@ -1047,8 +1047,8 @@ public class ComponentPortlet extends FossologyAwarePortlet {
         final User user = UserCacheHolder.getUserFromRequest(request);
         request.setAttribute(DOCUMENT_TYPE, SW360Constants.TYPE_RELEASE);
         request.setAttribute(IS_USER_AT_LEAST_CLEARING_ADMIN, PermissionUtils.isUserAtLeast(UserGroup.CLEARING_ADMIN, user));
-        boolean isSpdxDocument = SW360Constants.SPDX_DOCUMENT_ENABLED;
-        request.setAttribute(IS_SPDX_DOCUMENT, isSpdxDocument);
+        boolean isSPDXDocument = SW360Constants.SPDX_DOCUMENT_ENABLED;
+        request.setAttribute(IS_SPDX_DOCUMENT, isSPDXDocument);
         if (isNullOrEmpty(id) && isNullOrEmpty(releaseId)) {
             throw new PortletException("Component or Release ID not set!");
         }
@@ -1061,7 +1061,7 @@ public class ComponentPortlet extends FossologyAwarePortlet {
             SPDXDocument spdxDocument = new SPDXDocument();
             DocumentCreationInformation documentCreationInfo = new DocumentCreationInformation();
             Set<PackageInformation> packageInfos = new HashSet<>();
-            PackageInformation packageInfo = new PackageInformation();
+            PackageInformation packageInfo;
             if (!isNullOrEmpty(releaseId)) {
                 release = release == null ? client.getAccessibleReleaseByIdForEdit(releaseId, user) : release;
                 Map<String, String> sortedAdditionalData = getSortedMap(release.getAdditionalData(), true);
@@ -1177,7 +1177,7 @@ public class ComponentPortlet extends FossologyAwarePortlet {
                     JSONArray packageArray = JSONFactoryUtil.createJSONArray();
                     Set<String> setPackage = new HashSet<>();
                     if (!isNotEmpty(packageInfos)){
-                        packageInfo = generatePackageInfomation();
+                        packageInfo = generatePackageInformation();
                         String packageInfoJson = objectMapper.writeValueAsString(packageInfo);
                         setPackage.add(packageInfoJson);
                         packageArray.put(packageInfoJson);
@@ -1244,7 +1244,7 @@ public class ComponentPortlet extends FossologyAwarePortlet {
         return documentCreationInfo;
     }
 
-    private PackageInformation generatePackageInfomation() {
+    private PackageInformation generatePackageInformation() {
         PackageInformation packageInfo = new PackageInformation();
 
         for (PackageInformation._Fields field : PackageInformation._Fields.values()) {
@@ -1797,7 +1797,6 @@ public class ComponentPortlet extends FossologyAwarePortlet {
                 request.setAttribute(COMPONENT_VISIBILITY_RESTRICTION, IS_COMPONENT_VISIBILITY_RESTRICTION_ENABLED);
                 request.setAttribute(BULK_RELEASE_DELETING, IS_BULK_RELEASE_DELETING_ENABLED);
                 request.setAttribute(IS_USER_ADMIN, PermissionUtils.isUserAtLeast(UserGroup.ADMIN, user));
-                
 
                 // get vulnerabilities
                 Set<UserGroup> allSecRoles = !CommonUtils.isNullOrEmptyMap(user.getSecondaryDepartmentsAndRoles())
@@ -2481,7 +2480,7 @@ public class ComponentPortlet extends FossologyAwarePortlet {
                                 log.error("Error when write Value As String DocumentCreationInfoJson",e);
                             }
                             try {
-                                String packageInfoJson = objectMapper.writeValueAsString(generatePackageInfomation());
+                                String packageInfoJson = objectMapper.writeValueAsString(generatePackageInformation());
                                 packageInfoJson = "[" + packageInfoJson + "]";
                                 request.setAttribute(SPDXDocument._Fields.SPDX_PACKAGE_INFO_IDS.toString(), packageInfoJson);
                             } catch (JsonProcessingException e) {
