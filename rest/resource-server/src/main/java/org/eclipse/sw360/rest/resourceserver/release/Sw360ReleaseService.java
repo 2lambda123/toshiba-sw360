@@ -12,6 +12,7 @@
 
 package org.eclipse.sw360.rest.resourceserver.release;
 
+import com.sun.javadoc.Doc;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +36,12 @@ import org.eclipse.sw360.datahandler.thrift.components.ComponentService;
 import org.eclipse.sw360.datahandler.thrift.fossology.FossologyService;
 import org.eclipse.sw360.datahandler.thrift.projects.Project;
 import org.eclipse.sw360.datahandler.thrift.projects.ProjectService;
+import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.DocumentCreationInformation;
+import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.DocumentCreationInformationService;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxdocument.SPDXDocument;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxdocument.SPDXDocumentService;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformation;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformationService;
 import org.eclipse.sw360.datahandler.thrift.users.User;
 import org.eclipse.sw360.rest.resourceserver.Sw360ResourceServer;
 import org.eclipse.sw360.rest.resourceserver.attachment.Sw360AttachmentService;
@@ -158,6 +165,22 @@ public class Sw360ReleaseService implements AwareOfRestServices<Release> {
     @Override
     public Release convertToEmbeddedWithExternalIds(Release sw360Object) {
         return rch.convertToEmbeddedRelease(sw360Object).setExternalIds(sw360Object.getExternalIds());
+    }
+
+    public SPDXDocument getSPDXDocumentById(String id, User user) throws TException {
+        SPDXDocumentService.Iface spdxDocumentService = getThriftSPDXDocumentClient();
+        SPDXDocument spdxDocument = spdxDocumentService.getSPDXDocumentById(id, user);
+        return spdxDocument;
+    }
+
+    public DocumentCreationInformation getDocumentCreationInformationById(String id, User user) throws TException {
+        DocumentCreationInformationService.Iface documentCreationInformationService = getThriftDocumentCreationInformation();
+        return documentCreationInformationService.getDocumentCreationInformationById(id, user);
+    }
+
+    public PackageInformation getPackageInformationById(String id, User user) throws TException {
+        PackageInformationService.Iface packageInformation = getThriftIPackageInformation();
+        return packageInformation.getPackageInformationById(id, user);
     }
 
     public Release createRelease(Release release, User sw360User) throws TException {
@@ -661,6 +684,24 @@ public class Sw360ReleaseService implements AwareOfRestServices<Release> {
     private ComponentService.Iface getThriftComponentClient() throws TTransportException {
         ComponentService.Iface componentClient = new ThriftClients().makeComponentClient();
         return componentClient;
+    }
+
+    private SPDXDocumentService.Iface getThriftSPDXDocumentClient() throws TTransportException {
+        THttpClient thriftClient = new THttpClient(thriftServerUrl + "/spdxdocument/thrift");
+        TProtocol protocol = new TCompactProtocol(thriftClient);
+        return new SPDXDocumentService.Client(protocol);
+    }
+
+    private DocumentCreationInformationService.Iface getThriftDocumentCreationInformation() throws TTransportException {
+        THttpClient thriftClient = new THttpClient(thriftServerUrl + "/spdxdocumentcreationinfo/thrift");
+        TProtocol protocol = new TCompactProtocol(thriftClient);
+        return new DocumentCreationInformationService.Client(protocol);
+    }
+
+    private PackageInformationService.Iface getThriftIPackageInformation() throws TTransportException {
+        THttpClient thriftClient = new THttpClient(thriftServerUrl + "/spdxpackageinfo/thrift");
+        TProtocol protocol = new TCompactProtocol(thriftClient);
+        return new PackageInformationService.Client(protocol);
     }
 
     private FossologyService.Iface getThriftFossologyClient() throws TTransportException {

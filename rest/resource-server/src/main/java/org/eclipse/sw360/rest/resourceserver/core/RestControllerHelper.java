@@ -50,6 +50,10 @@ import org.eclipse.sw360.datahandler.thrift.projects.ClearingRequest;
 import org.eclipse.sw360.datahandler.thrift.projects.Project;
 import org.eclipse.sw360.datahandler.thrift.projects.ProjectService;
 import org.eclipse.sw360.datahandler.thrift.projects.ProjectDTO;
+import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.DocumentCreationInformation;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxdocument.SPDXDocument;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformation;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformationService;
 import org.eclipse.sw360.datahandler.thrift.users.User;
 import org.eclipse.sw360.datahandler.thrift.vendors.Vendor;
 import org.eclipse.sw360.datahandler.thrift.vulnerabilities.CVEReference;
@@ -397,6 +401,21 @@ public class RestControllerHelper<T> {
         for (ReleaseLink releaseLink : releaseLinkInogreAttachments) {
             addEmbeddedReleaseLink(halResource, releaseLink);
         }
+    }
+
+    public void addEmbeddedSpdxDocument(HalResource halResource, SPDXDocument spdxDocument) {
+        HalResource<SPDXDocument> halRelease = new HalResource<>(spdxDocument);
+        halResource.addEmbeddedResource("sw360:spdxDocument", halRelease);
+    }
+
+    public void addEmbeddedDocumentCreationInformation(HalResource halResource, DocumentCreationInformation documentCreationInformation) {
+        HalResource<DocumentCreationInformation> halRelease = new HalResource<>(documentCreationInformation);
+        halResource.addEmbeddedResource("sw360:documentCreationInformation", halRelease);
+    }
+
+    public void addEmbeddedPackageInformation(HalResource halResource, PackageInformation packageInformation) {
+        HalResource<PackageInformation> halRelease = new HalResource<>(packageInformation);
+        halResource.addEmbeddedResource("sw360:packageInformation", halRelease);
     }
 
     public void addEmbeddedPackages(

@@ -62,6 +62,9 @@ import org.eclipse.sw360.datahandler.thrift.licenseinfo.LicenseNameWithText;
 import org.eclipse.sw360.datahandler.thrift.projects.Project;
 import org.eclipse.sw360.datahandler.thrift.components.Component;
 import org.eclipse.sw360.datahandler.thrift.components.ExternalToolProcess;
+import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.DocumentCreationInformation;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxdocument.SPDXDocument;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformation;
 import org.eclipse.sw360.datahandler.thrift.users.User;
 import org.eclipse.sw360.datahandler.thrift.vendors.Vendor;
 import org.eclipse.sw360.datahandler.thrift.vulnerabilities.ReleaseVulnerabilityRelation;
@@ -223,6 +226,22 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
         HalResource halRelease = createHalReleaseResource(sw360Release, true);
         restControllerHelper.addEmbeddedDataToHalResourceRelease(halRelease, sw360Release);
         List<ReleaseLink> linkedReleaseRelations = releaseService.getLinkedReleaseRelations(sw360Release, sw360User);
+
+        String spdxId = sw360Release.getSpdxId();
+        if (CommonUtils.isNotNullEmptyOrWhitespace(spdxId) && SW360Constants.SPDX_DOCUMENT_ENABLED) {
+            SPDXDocument spdxDocument = releaseService.getSPDXDocumentById(spdxId, sw360User);
+            restControllerHelper.addEmbeddedSpdxDocument(halRelease, spdxDocument);
+            String spdxDocumentCreationInfoId = spdxDocument.getSpdxDocumentCreationInfoId();
+            if (CommonUtils.isNotNullEmptyOrWhitespace(spdxDocumentCreationInfoId)) {
+                DocumentCreationInformation documentCreationInformation = releaseService.getDocumentCreationInformationById(spdxDocumentCreationInfoId, sw360User);
+                restControllerHelper.addEmbeddedDocumentCreationInformation(halRelease, documentCreationInformation);
+            }
+            String spdxPackageInfoId = spdxDocument.getSpdxPackageInfoIds().stream().findFirst().get();
+            if(CommonUtils.isNotNullEmptyOrWhitespace(spdxPackageInfoId)) {
+                PackageInformation packageInformation = releaseService.getPackageInformationById(spdxPackageInfoId, sw360User);
+                restControllerHelper.addEmbeddedPackageInformation(halRelease, packageInformation);
+            }
+        }
         if (linkedReleaseRelations != null) {
             restControllerHelper.addEmbeddedReleaseLinks(halRelease, linkedReleaseRelations);
         }
