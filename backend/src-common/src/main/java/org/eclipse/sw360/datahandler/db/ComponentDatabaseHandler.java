@@ -64,6 +64,8 @@ import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.thrift.TException;
+import org.eclipse.sw360.spdx.SpdxBOMExporter;
+import org.eclipse.sw360.spdx.SpdxBOMExporterSink;
 import org.eclipse.sw360.spdx.SpdxBOMImporter;
 import org.eclipse.sw360.spdx.SpdxBOMImporterSink;
 import org.jetbrains.annotations.NotNull;
@@ -250,6 +252,19 @@ public class ComponentDatabaseHandler extends AttachmentAwareDatabaseHandler {
             if (isrCountAfter > 0) {
                 releaseAfter.setClearingState(ClearingState.SCAN_AVAILABLE);
             }
+        }
+    }
+
+    public RequestSummary exportSPDX(User user, String releaseId, String outputFormat) throws SW360Exception {
+        RequestSummary requestSummary = new RequestSummary();
+        SpdxBOMExporterSink spdxBOMExporterSink;
+        try {
+            spdxBOMExporterSink = new SpdxBOMExporterSink(user, null, this);
+            final SpdxBOMExporter spdxBOMExporter = new SpdxBOMExporter(spdxBOMExporterSink);
+            return spdxBOMExporter.exportSPDXFile(releaseId, outputFormat);
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+            return requestSummary.setRequestStatus(RequestStatus.FAILURE);
         }
     }
 
@@ -2716,8 +2731,12 @@ public class ComponentDatabaseHandler extends AttachmentAwareDatabaseHandler {
 
                 ImportBomRequestPreparation importBomRequestPreparation = spdxBOMImporter.prepareImportSpdxBOMAsRelease(sourceFile);
                 if (RequestStatus.SUCCESS.equals(importBomRequestPreparation.getRequestStatus())) {
+                    log.info("--------importBomRequestPreparation.getComponentsName()---------"+ importBomRequestPreparation.getComponentsName());
+                    log.info("--------importBomRequestPreparation.getReleasesName()---------"+ importBomRequestPreparation.getReleasesName());
                     List<String> componentsName = getComponentsName(importBomRequestPreparation.getComponentsName());
                     Map<String, String> releasesName = getReleasesName(importBomRequestPreparation.getReleasesName());
+                    log.info("--------componentsName---------"+ componentsName.toString());
+                    log.info("--------releasesName---------"+ releasesName.toString());
                     isDuplicateRelease(releasesName);
                     isDuplicateComponent(componentsName,true);
                     if (listComponentName.size() == 0 && mapReleaseName.size() == 0){
@@ -2739,6 +2758,8 @@ public class ComponentDatabaseHandler extends AttachmentAwareDatabaseHandler {
                         }
                         listComponentName.clear();
                         mapReleaseName.clear();
+                        log.info("--------componentsName---------"+ componentName);
+                        log.info("--------releasesName---------"+ releaseName);
                         importBomRequestPreparation.setComponentsName(componentName);
                         importBomRequestPreparation.setReleasesName(releaseName);
                         importBomRequestPreparation.setIsComponentDuplicate(false);

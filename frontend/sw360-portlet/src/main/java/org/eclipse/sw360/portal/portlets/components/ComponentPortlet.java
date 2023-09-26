@@ -91,6 +91,8 @@ import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -268,6 +270,69 @@ public class ComponentPortlet extends FossologyAwarePortlet {
             evaluateCLIAttachments(request, response);
         } else if (PortalConstants.DELETE_PACKAGE.equals(action)) {
             serveDeletePackage(request, response);
+        } else if (PortalConstants.EVALUATE_CLI_ATTACHMENTS.equals(action)) {
+            evaluateCLIAttachments(request, response);
+        } else if (action.equals("export-spdx")) {
+            exportSPDX(request, response);
+        } else if (action.equals("download-export-spdx")) {
+            downloadSPDX(request, response);
+        }
+    }
+
+
+    private void downloadSPDX(ResourceRequest request, ResourceResponse response) {
+        final ComponentService.Iface componentClient = thriftClients.makeComponentClient();
+        String releaseId = request.getParameter(PortalConstants.RELEASE_ID);
+        String outputFormat = request.getParameter(PortalConstants.WHAT);
+        User user = UserCacheHolder.getUserFromRequest(request);
+        String filename = releaseId + "." + outputFormat.toLowerCase();
+        String exportFileName = null;
+
+        if (PortalConstants.ACTION_CANCEL.equals(request.getParameter(PortalConstants.ACTION_CANCEL))) {
+            deleteFileExport(outputFormat, releaseId, filename);
+            return;
+        }
+
+        try {
+            log.info("Download SPDX file");
+            exportFileName = componentClient.getReleaseById(releaseId, user).getName().replaceAll("[\\/:*?\"<>|\\s]","_")
+                    + "_" + componentClient.getReleaseById(releaseId, user).getVersion().replaceAll("[\\/:*?\"<>|\\s]","_")
+                    + "_" + SW360Utils.getCreatedOn() + "." + outputFormat.toLowerCase();
+            InputStream inputStream = new FileInputStream(filename);
+            PortletResponseUtil.sendFile(request, response, exportFileName, inputStream, CONTENT_TYPE_OPENXML_SPREADSHEET);
+            log.info("Download SPDX file success !!!");
+        } catch (IOException | TException e) {
+            e.printStackTrace();
+        }
+        deleteFileExport(outputFormat, releaseId, filename);
+    }
+
+    // delete file after user download
+    private void deleteFileExport(String outputFormat, String releaseId, String filename) {
+        try {
+            if (!outputFormat.equals("JSON")) {
+                Files.delete(Paths.get(releaseId + ".json"));
+            }
+            if (Files.exists(Paths.get(filename))) {
+                Files.delete(Paths.get(filename));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            log.error("Failed to delete files.");
+        }
+    }
+
+    private void exportSPDX(ResourceRequest request, ResourceResponse response) {
+        final ComponentService.Iface componentClient = thriftClients.makeComponentClient();
+        String releaseId = request.getParameter(PortalConstants.RELEASE_ID);
+        String outputFormat = request.getParameter(PortalConstants.WHAT);
+        User user = UserCacheHolder.getUserFromRequest(request);
+
+        try {
+            final RequestSummary requestSummary = componentClient.exportSPDX(user, releaseId, outputFormat);
+            renderRequestSummary(request, response, requestSummary);
+        } catch (TException e) {
+            log.error("Failed to export SPDX file.", e);
         }
     }
 

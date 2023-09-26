@@ -1032,4 +1032,9 @@ service ComponentService {
     * Get releases dependency network of release
     */
     list<ReleaseNode> getReleaseRelationNetworkOfRelease(1: Release release, 2:User user)
+
+    /**
+     * parse a bom file and write the information to SW360
+     **/
+    RequestSummary exportSPDX(1: User user, 2:string releaseId, 3:string outputFormat);
 }

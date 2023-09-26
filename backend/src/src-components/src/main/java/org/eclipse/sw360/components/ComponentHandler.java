@@ -70,6 +70,15 @@ public class ComponentHandler implements ComponentService.Iface {
         releaseSearchHandler = new ReleaseSearchHandler(httpClient, client, dbName);
     }
 
+    @Override
+    public RequestSummary exportSPDX(User user, String releaseId, String outputFormat) throws TException {
+        assertNotNull(releaseId);
+        assertUser(user);
+        return handler.exportSPDX(user, releaseId, outputFormat);
+    }
+
+
+
     /////////////////////
     // SUMMARY GETTERS //
     /////////////////////
