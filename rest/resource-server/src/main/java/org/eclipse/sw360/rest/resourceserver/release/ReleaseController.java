@@ -17,16 +17,8 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.LinkedHashMap;
-import java.util.Objects;
-import java.util.TreeSet;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
@@ -46,12 +38,7 @@ import org.eclipse.sw360.datahandler.common.SW360Utils;
 import org.eclipse.sw360.datahandler.resourcelists.PaginationParameterException;
 import org.eclipse.sw360.datahandler.resourcelists.PaginationResult;
 import org.eclipse.sw360.datahandler.resourcelists.ResourceClassNotFoundException;
-import org.eclipse.sw360.datahandler.thrift.ReleaseRelationship;
-import org.eclipse.sw360.datahandler.thrift.RequestStatus;
-import org.eclipse.sw360.datahandler.thrift.Source;
-import org.eclipse.sw360.datahandler.thrift.VerificationState;
-import org.eclipse.sw360.datahandler.thrift.VerificationStateInfo;
-import org.eclipse.sw360.datahandler.thrift.RestrictedResource;
+import org.eclipse.sw360.datahandler.thrift.*;
 import org.eclipse.sw360.datahandler.thrift.attachments.Attachment;
 import org.eclipse.sw360.datahandler.thrift.attachments.AttachmentDTO;
 import org.eclipse.sw360.datahandler.thrift.attachments.AttachmentType;
@@ -64,6 +51,9 @@ import org.eclipse.sw360.datahandler.thrift.licenseinfo.LicenseInfoParsingResult
 import org.eclipse.sw360.datahandler.thrift.projects.Project;
 import org.eclipse.sw360.datahandler.thrift.components.Component;
 import org.eclipse.sw360.datahandler.thrift.components.ExternalToolProcess;
+import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.DocumentCreationInformation;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxdocument.SPDXDocument;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformation;
 import org.eclipse.sw360.datahandler.thrift.users.User;
 import org.eclipse.sw360.datahandler.thrift.vendors.Vendor;
 import org.eclipse.sw360.datahandler.thrift.vulnerabilities.ReleaseVulnerabilityRelation;
@@ -113,6 +103,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class ReleaseController implements RepresentationModelProcessor<RepositoryLinksResource> {
     public static final String RELEASES_URL = "/releases";
+    private static final String SPDX_DOCUMENT = "spdxDocument";
+    private static final String DOCUMENT_CREATION_INFORMATION = "documentCreationInformation";
+    private static final String PACKAGE_INFORMATION = "packageInformation";
     private static final Logger log = LogManager.getLogger(ReleaseController.class);
     private static final Map<String, ReentrantLock> mapOfLocks = new HashMap<String, ReentrantLock>();
     private static final ImmutableMap<Release._Fields,String> mapOfFieldsTobeEmbedded = ImmutableMap.of(
@@ -126,7 +119,8 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
             .build();
     private static final ImmutableMap<String, String> RESPONSE_BODY_FOR_MODERATION_REQUEST = ImmutableMap.<String, String>builder()
             .put("message", "Moderation request is created").build();
-
+    private static final ObjectMapper mapper = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     @NonNull
     private Sw360ReleaseService releaseService;
 
@@ -225,6 +219,22 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
         HalResource halRelease = createHalReleaseResource(sw360Release, true);
         restControllerHelper.addEmbeddedDataToHalResourceRelease(halRelease, sw360Release);
         List<ReleaseLink> linkedReleaseRelations = releaseService.getLinkedReleaseRelations(sw360Release, sw360User);
+
+        String spdxId = sw360Release.getSpdxId();
+        if (CommonUtils.isNotNullEmptyOrWhitespace(spdxId) && SW360Constants.SPDX_DOCUMENT_ENABLED) {
+            SPDXDocument spdxDocument = releaseService.getSPDXDocumentById(spdxId, sw360User);
+            restControllerHelper.addEmbeddedSpdxDocument(halRelease, spdxDocument);
+            String spdxDocumentCreationInfoId = spdxDocument.getSpdxDocumentCreationInfoId();
+            if (CommonUtils.isNotNullEmptyOrWhitespace(spdxDocumentCreationInfoId)) {
+                DocumentCreationInformation documentCreationInformation = releaseService.getDocumentCreationInformationById(spdxDocumentCreationInfoId, sw360User);
+                restControllerHelper.addEmbeddedDocumentCreationInformation(halRelease, documentCreationInformation);
+            }
+            String spdxPackageInfoId = spdxDocument.getSpdxPackageInfoIds().stream().findFirst().get();
+            if(CommonUtils.isNotNullEmptyOrWhitespace(spdxPackageInfoId)) {
+                PackageInformation packageInformation = releaseService.getPackageInformationById(spdxPackageInfoId, sw360User);
+                restControllerHelper.addEmbeddedPackageInformation(halRelease, packageInformation);
+            }
+        }
         if (linkedReleaseRelations != null) {
             restControllerHelper.addEmbeddedReleaseLinks(halRelease, linkedReleaseRelations);
         }
@@ -483,6 +493,70 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
                 .buildAndExpand(sw360Release.getId()).toUri();
 
         return ResponseEntity.created(location).body(halResource);
+    }
+
+    @PreAuthorize("hasAuthority('WRITE')")
+    @PatchMapping(value = RELEASES_URL + "/{id}/spdx")
+    public ResponseEntity<?> updateSPDX( @RequestBody Map<String, Object> reqBodyMap, @PathVariable("id") String releaseId) throws TException {
+        if (!SW360Constants.SPDX_DOCUMENT_ENABLED) {
+            return new ResponseEntity<>("Feature SPDXDocument disable", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        if (CommonUtils.isNullEmptyOrWhitespace(releaseId)) {
+            throw new HttpMessageNotReadableException("Release id not found");
+        }
+        User user = restControllerHelper.getSw360UserFromAuthentication();
+        Release release = releaseService.getReleaseForUserById(releaseId, user);
+        String spdxId = "";
+        // add SPDXDocument
+        if (CommonUtils.isNullEmptyOrWhitespace(release.getSpdxId())) {
+            spdxId = restControllerHelper.addSPDX(release, user);
+        }
+        SPDXDocument spdxDocumentActual = CommonUtils.isNullEmptyOrWhitespace(spdxId)
+                ? releaseService.getSPDXDocumentById(release.getSpdxId(), user)
+                : releaseService.getSPDXDocumentById(spdxId, user);
+        spdxId = spdxDocumentActual.getId();
+        if (CommonUtils.isNullEmptyOrWhitespace(spdxId)) {
+            throw new HttpMessageNotReadableException("Update SPDXDocument Failed!");
+        }
+        HalResource<Release> halRelease = createHalReleaseResource(release, false);
+
+        if(reqBodyMap.isEmpty()) {
+            return ResponseEntity.ok(halRelease);
+        }
+
+        if (null != reqBodyMap.get(SPDX_DOCUMENT)) {
+            SPDXDocument spdxDocumentRequest = restControllerHelper.convertToSPDXDocument(reqBodyMap.get(SPDX_DOCUMENT));
+            if (null != spdxDocumentRequest) {
+                spdxDocumentRequest = restControllerHelper.updateSPDXDocumentFromRequest(spdxDocumentRequest, spdxDocumentActual, release.getModerators());
+                RequestStatus requestStatus = releaseService.updateSPDXDocument(spdxDocumentRequest, release.getId(), user);
+                if (requestStatus == RequestStatus.SENT_TO_MODERATOR) {
+                    return ResponseEntity.accepted().body(RESPONSE_BODY_FOR_MODERATION_REQUEST);
+                }
+                restControllerHelper.addEmbeddedSpdxDocument(halRelease, spdxDocumentRequest);
+            }
+        } else {
+            restControllerHelper.addEmbeddedSpdxDocument(halRelease, spdxDocumentActual);
+        }
+
+        if (null != reqBodyMap.get(DOCUMENT_CREATION_INFORMATION)) {
+            DocumentCreationInformation documentCreationInformation = restControllerHelper.convertToDocumentCreationInformation(reqBodyMap.get(DOCUMENT_CREATION_INFORMATION));
+            if (null != documentCreationInformation) {
+                documentCreationInformation = restControllerHelper.updateDocumentCreationInformationFromRequest(documentCreationInformation, spdxDocumentActual, release.getModerators());
+                releaseService.updateDocumentCreationInformation(documentCreationInformation, spdxId, user);
+                restControllerHelper.addEmbeddedDocumentCreationInformation(halRelease, documentCreationInformation);
+            }
+        }
+
+        if (null != reqBodyMap.get(PACKAGE_INFORMATION)) {
+            PackageInformation packageInformation = restControllerHelper.convertToPackageInformation(reqBodyMap.get(PACKAGE_INFORMATION));
+            if( null != packageInformation) {
+                packageInformation = restControllerHelper.updatePackageInformationFromRequest(packageInformation, spdxDocumentActual, release.getModerators());
+                releaseService.updatePackageInformation(packageInformation, spdxId, user);
+                restControllerHelper.addEmbeddedPackageInformation(halRelease, packageInformation);
+            }
+        }
+
+        return new ResponseEntity<>(halRelease, HttpStatus.OK);
     }
 
     @GetMapping(value = RELEASES_URL + "/{id}/attachments")

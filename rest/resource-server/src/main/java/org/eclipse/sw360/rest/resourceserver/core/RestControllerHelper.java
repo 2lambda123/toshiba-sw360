@@ -9,6 +9,7 @@
  */
 package org.eclipse.sw360.rest.resourceserver.core;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import lombok.NonNull;
@@ -20,6 +21,7 @@ import org.apache.thrift.TException;
 import org.apache.thrift.TFieldIdEnum;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.thrift.protocol.TType;
 import org.eclipse.sw360.datahandler.common.CommonUtils;
 import org.eclipse.sw360.datahandler.common.SW360Utils;
 import org.eclipse.sw360.datahandler.resourcelists.PaginationOptions;
@@ -28,9 +30,7 @@ import org.eclipse.sw360.datahandler.resourcelists.PaginationResult;
 import org.eclipse.sw360.datahandler.resourcelists.ResourceClassNotFoundException;
 import org.eclipse.sw360.datahandler.resourcelists.ResourceComparatorGenerator;
 import org.eclipse.sw360.datahandler.resourcelists.ResourceListController;
-import org.eclipse.sw360.datahandler.thrift.ProjectReleaseRelationship;
-import org.eclipse.sw360.datahandler.thrift.Quadratic;
-import org.eclipse.sw360.datahandler.thrift.SW360Exception;
+import org.eclipse.sw360.datahandler.thrift.*;
 import org.eclipse.sw360.datahandler.thrift.attachments.Attachment;
 import org.eclipse.sw360.datahandler.thrift.attachments.AttachmentDTO;
 import org.eclipse.sw360.datahandler.thrift.attachments.CheckStatus;
@@ -50,6 +50,18 @@ import org.eclipse.sw360.datahandler.thrift.projects.ClearingRequest;
 import org.eclipse.sw360.datahandler.thrift.projects.Project;
 import org.eclipse.sw360.datahandler.thrift.projects.ProjectService;
 import org.eclipse.sw360.datahandler.thrift.projects.ProjectDTO;
+import org.eclipse.sw360.datahandler.thrift.spdx.annotations.Annotations;
+import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.*;
+import org.eclipse.sw360.datahandler.thrift.spdx.otherlicensinginformationdetected.OtherLicensingInformationDetected;
+import org.eclipse.sw360.datahandler.thrift.spdx.relationshipsbetweenspdxelements.RelationshipsBetweenSPDXElements;
+import org.eclipse.sw360.datahandler.thrift.spdx.snippetinformation.SnippetInformation;
+import org.eclipse.sw360.datahandler.thrift.spdx.snippetinformation.SnippetRange;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxdocument.SPDXDocument;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxdocument.SPDXDocumentService;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.ExternalReference;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformation;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformationService;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageVerificationCode;
 import org.eclipse.sw360.datahandler.thrift.users.User;
 import org.eclipse.sw360.datahandler.thrift.vendors.Vendor;
 import org.eclipse.sw360.datahandler.thrift.vulnerabilities.CVEReference;
@@ -123,6 +135,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static org.eclipse.sw360.datahandler.common.CommonUtils.isNullEmptyOrWhitespace;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 
@@ -145,6 +158,9 @@ public class RestControllerHelper<T> {
     @NonNull
     private final ResourceListController<T> resourceListController = new ResourceListController<>();
 
+    @NonNull
+    private final com.fasterxml.jackson.databind.Module sw360Module;
+
     private static final Logger LOGGER = LogManager.getLogger(RestControllerHelper.class);
 
     private static final String PAGINATION_KEY_FIRST = "first";
@@ -152,11 +168,21 @@ public class RestControllerHelper<T> {
     private static final String PAGINATION_KEY_NEXT = "next";
     private static final String PAGINATION_KEY_LAST = "last";
     private static final String PAGINATION_PARAM_PAGE = "page";
+    private static final String SPDX_DOCUMENT = "spdxDocument";
+    private static final String DOCUMENT_CREATION_INFORMATION = "documentCreationInformation";
+    private static final String PACKAGE_INFORMATION = "packageInformation";
     private static final double MIN_CVSS = 0;
     private static final double MAX_CVSS = 10;
     public static final String PAGINATION_PARAM_PAGE_ENTRIES = "page_entries";
+    private static final ImmutableMap<String, String> RESPONSE_BODY_FOR_MODERATION_REQUEST = ImmutableMap.<String, String>builder()
+            .put("message", "Moderation request is created").build();
     public static final ImmutableSet<ProjectReleaseRelationship._Fields> SET_OF_PROJECTRELEASERELATION_FIELDS_TO_IGNORE = ImmutableSet
             .of(ProjectReleaseRelationship._Fields.CREATED_ON, ProjectReleaseRelationship._Fields.CREATED_BY);
+    private static final ObjectMapper mapper = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private static final SPDXDocumentService.Iface spdxClient = new ThriftClients().makeSPDXClient();
+    private static final DocumentCreationInformationService.Iface documentClient = new ThriftClients().makeSPDXDocumentInfoClient();
+    private static final PackageInformationService.Iface packageClient = new ThriftClients().makeSPDXPackageInfoClient();
 
     public User getSw360UserFromAuthentication() {
         try {
@@ -397,6 +423,21 @@ public class RestControllerHelper<T> {
         for (ReleaseLink releaseLink : releaseLinkInogreAttachments) {
             addEmbeddedReleaseLink(halResource, releaseLink);
         }
+    }
+
+    public void addEmbeddedSpdxDocument(HalResource halResource, SPDXDocument spdxDocument) {
+        HalResource<SPDXDocument> halRelease = new HalResource<>(spdxDocument);
+        halResource.addEmbeddedResource("sw360:spdxDocument", halRelease);
+    }
+
+    public void addEmbeddedDocumentCreationInformation(HalResource halResource, DocumentCreationInformation documentCreationInformation) {
+        HalResource<DocumentCreationInformation> halRelease = new HalResource<>(documentCreationInformation);
+        halResource.addEmbeddedResource("sw360:documentCreationInformation", halRelease);
+    }
+
+    public void addEmbeddedPackageInformation(HalResource halResource, PackageInformation packageInformation) {
+        HalResource<PackageInformation> halRelease = new HalResource<>(packageInformation);
+        halResource.addEmbeddedResource("sw360:packageInformation", halRelease);
     }
 
     public void addEmbeddedPackages(
@@ -1311,4 +1352,356 @@ public class RestControllerHelper<T> {
             addEmbeddedFields("sw360:cotsDetail", cotsDetailsHalResource, halResource);
         }
     }
+
+    public SPDXDocument generateSpdxDocument() {
+        SPDXDocument spdxDocument = new SPDXDocument();
+        for (SPDXDocument._Fields field : SPDXDocument._Fields.values()) {
+            switch (SPDXDocument.metaDataMap.get(field).valueMetaData.type) {
+                case TType.SET:
+                    spdxDocument.setFieldValue(field, new HashSet<>());
+                    break;
+                case TType.STRING:
+                    spdxDocument.setFieldValue(field, "");
+                    break;
+                default:
+                    break;
+            }
+        }
+        return spdxDocument;
+    }
+
+    public DocumentCreationInformation generateDocumentCreationInformation() {
+        DocumentCreationInformation documentCreationInfo = new DocumentCreationInformation();
+        for (DocumentCreationInformation._Fields field : DocumentCreationInformation._Fields.values()) {
+            switch (DocumentCreationInformation.metaDataMap.get(field).valueMetaData.type) {
+                case TType.SET:
+                    documentCreationInfo.setFieldValue(field, new HashSet<>());
+                    break;
+                case TType.STRING:
+                    documentCreationInfo.setFieldValue(field, "");
+                    break;
+                default:
+                    break;
+            }
+        }
+        return documentCreationInfo;
+    }
+
+    public PackageInformation generatePackageInformation() {
+        PackageInformation packageInfo = new PackageInformation();
+
+        for (PackageInformation._Fields field : PackageInformation._Fields.values()) {
+
+            switch (field) {
+                case PACKAGE_VERIFICATION_CODE: {
+                    PackageVerificationCode packageVerificationCode = new PackageVerificationCode();
+                    packageInfo.setPackageVerificationCode(packageVerificationCode);
+                    break;
+                }
+                default: {
+                    switch (PackageInformation.metaDataMap.get(field).valueMetaData.type) {
+                        case TType.SET:
+                            packageInfo.setFieldValue(field, new HashSet<>());
+                            break;
+                        case TType.STRING:
+                            packageInfo.setFieldValue(field, "");
+                            break;
+                        case TType.BOOL:
+                            packageInfo.setFieldValue(field, true);
+                        default:
+                            break;
+                    }
+                    break;
+                }
+            }
+        }
+        return packageInfo;
+    }
+
+    public SPDXDocument convertToSPDXDocument(Object object) {
+        mapper.registerModule(sw360Module);
+        return mapper.convertValue(object, SPDXDocument.class);
+    }
+
+    public DocumentCreationInformation convertToDocumentCreationInformation(Object object) {
+        mapper.registerModule(sw360Module);
+        return mapper.convertValue(object, DocumentCreationInformation.class);
+    }
+
+    public PackageInformation convertToPackageInformation(Object object) {
+        mapper.registerModule(sw360Module);
+        return mapper.convertValue(object, PackageInformation.class);
+    }
+
+    public SPDXDocument updateSPDXDocumentFromRequest(SPDXDocument spdxDocumentRequest,
+                                              SPDXDocument spdxDocumentActual,
+                                              Set<String> moderators) {
+        if(CommonUtils.isNotEmpty(spdxDocumentRequest.getSnippets())) {
+            if(!checkIndexSnippetInformations(spdxDocumentRequest.getSnippets())) {
+                throw new HttpMessageNotReadableException("Index of SnippetInformations invalid!");
+            }
+            if(!checkIndexSnippetRanges(spdxDocumentRequest.getSnippets())) {
+                throw new HttpMessageNotReadableException("Index of SnippetRanges invalid!");
+            }
+        }
+        if(CommonUtils.isNotEmpty(spdxDocumentRequest.getRelationships()) && !checkIndexRelationships(spdxDocumentRequest.getRelationships())) {
+            throw new HttpMessageNotReadableException("Index of Relationships SPDXDocument invalid!");
+        }
+        if(CommonUtils.isNotEmpty(spdxDocumentRequest.getAnnotations()) && !checkIndexAnnotations(spdxDocumentRequest.getAnnotations())) {
+            throw new HttpMessageNotReadableException("Index of Annotations SPDXDocument invalid!");
+        }
+        if(CommonUtils.isNotEmpty(spdxDocumentRequest.getOtherLicensingInformationDetecteds())
+                && !checkIndexOtherLicensingInformationDetected(spdxDocumentRequest.getOtherLicensingInformationDetecteds())) {
+            throw new HttpMessageNotReadableException("Index of OtherLicensingInformationDetecteds invalid!");
+        }
+
+        return spdxDocumentRequest.setModerators(moderators)
+                .setId(spdxDocumentActual.getId())
+                .setSpdxDocumentCreationInfoId(spdxDocumentActual.getSpdxDocumentCreationInfoId())
+                .setSpdxPackageInfoIds(spdxDocumentActual.getSpdxPackageInfoIds())
+                .setRevision(spdxDocumentActual.getRevision());
+    }
+
+    public DocumentCreationInformation updateDocumentCreationInformationFromRequest(DocumentCreationInformation documentCreationInformation,
+                                                             SPDXDocument spdxDocumentActual,
+                                                             Set<String> moderators) {
+        if(CommonUtils.isNotEmpty(documentCreationInformation.getExternalDocumentRefs()) &&
+                !checkIndexExternalDocumentReferences(documentCreationInformation.getExternalDocumentRefs())) {
+            throw new HttpMessageNotReadableException("Index of xternalDocumentReferences invalid!");
+        }
+        if(CommonUtils.isNotEmpty(documentCreationInformation.getCreator()) &&
+                !checkIndexCreator(documentCreationInformation.getCreator())) {
+            throw new HttpMessageNotReadableException("Index of Creators invalid!");
+        }
+        return documentCreationInformation.setModerators(moderators)
+                .setId(spdxDocumentActual.getSpdxDocumentCreationInfoId());
+    }
+
+    public PackageInformation updatePackageInformationFromRequest(PackageInformation packageInformation,
+                                                    SPDXDocument spdxDocumentActual,
+                                                    Set<String> moderators) {
+        if(packageInformation.getIndex() != 0) {
+            throw new HttpMessageNotReadableException("Index of PackageInformation invalid!");
+        }
+
+        if(CommonUtils.isNotEmpty(packageInformation.getExternalRefs()) &&
+                !checkIndexExternalReference(packageInformation.getExternalRefs())) {
+            throw new HttpMessageNotReadableException("Index of ExternalReference invalid!");
+        }
+
+        if(CommonUtils.isNotEmpty(packageInformation.getAnnotations()) &&
+                !checkIndexAnnotations(packageInformation.getAnnotations())) {
+            throw new HttpMessageNotReadableException("Index of Annotations PackageInformation invalid!");
+        }
+
+        if(CommonUtils.isNotEmpty(packageInformation.getRelationships()) &&
+                !checkIndexRelationships(packageInformation.getRelationships())) {
+            throw new HttpMessageNotReadableException("Index of Relationships PackageInformation invalid!");
+        }
+
+        if(CommonUtils.isNotEmpty(packageInformation.getChecksums()) &&
+                !checkIndexChecksums(packageInformation.getChecksums())) {
+            throw new HttpMessageNotReadableException("Index of Checksums PackageInformation invalid!");
+        }
+
+        packageInformation.setModerators(moderators);
+        if (!CommonUtils.isNullOrEmptyCollection(spdxDocumentActual.getSpdxPackageInfoIds())) {
+            packageInformation.setId(spdxDocumentActual.getSpdxPackageInfoIds().stream().findFirst().get());
+        }
+        return packageInformation;
+    }
+
+    public String addSPDXDocument(Release release, User user) throws TException {
+        String spdxId = "";
+        SPDXDocument spdxDocumentGenerate = generateSpdxDocument();
+        spdxDocumentGenerate.setModerators(release.getModerators());
+        spdxDocumentGenerate.setReleaseId(release.getId());
+        if (CommonUtils.isNullEmptyOrWhitespace(spdxDocumentGenerate.getId())) {
+            spdxId = spdxClient.addSPDXDocument(spdxDocumentGenerate, user).getId();
+        }
+        return spdxId;
+    }
+
+    public void addDocumentCreationInformation(String spdxId, Set<String> moderators, User user) throws TException {
+        DocumentCreationInformation documentCreationInformation = generateDocumentCreationInformation();
+        documentCreationInformation.setModerators(moderators);
+        if (isNullOrEmpty(documentCreationInformation.getSpdxDocumentId())) {
+            documentCreationInformation.setSpdxDocumentId(spdxId);
+        }
+        if (isNullOrEmpty(documentCreationInformation.getId())) {
+            documentClient.addDocumentCreationInformation(documentCreationInformation, user);
+        }
+    }
+
+    public void addPackageInformation(String spdxId, Set<String> moderators, User user) throws TException {
+        PackageInformation packageInformation = generatePackageInformation();
+        packageInformation.setModerators(moderators);
+        if (isNullOrEmpty(packageInformation.getSpdxDocumentId())) {
+            packageInformation.setSpdxDocumentId(spdxId);
+        }
+        if (isNullOrEmpty(packageInformation.getId())) {
+            packageClient.addPackageInformation(packageInformation, user);
+        }
+    }
+
+    public String addSPDX(Release release, User user) throws TException {
+        String spdxId = addSPDXDocument(release, user);
+        if (CommonUtils.isNotNullEmptyOrWhitespace(spdxId)) {
+            throw new HttpMessageNotReadableException("Add SPDXDocument Failed!");
+        }
+        addDocumentCreationInformation(spdxId, release.getModerators(), user);
+        addPackageInformation(spdxId, release.getModerators(), user);
+        return spdxId;
+    }
+
+    public boolean validateIndexForSPDXDocument(SPDXDocument spdxDocumentRequest) {
+        // SnippetInformation
+        if(!checkIndexSnippetRanges(spdxDocumentRequest.getSnippets())) {
+            return false;
+        }
+        if(!checkIndexSnippetInformations(spdxDocumentRequest.getSnippets())) {
+            return false;
+        }
+
+        //relationships
+        if(!checkIndexRelationships(spdxDocumentRequest.getRelationships())) {
+            return false;
+        }
+        //annotaions
+        if(!checkIndexAnnotations(spdxDocumentRequest.getAnnotations())) {
+            return false;
+        }
+        //otherLicensingInformationDetecteds
+        if(!checkIndexOtherLicensingInformationDetected(spdxDocumentRequest.getOtherLicensingInformationDetecteds())) {
+            return false;
+        }
+        return true;
+    }
+
+    public boolean validateIndexDocumentCreationInformation(DocumentCreationInformation documentCreationInformationRequest) {
+        if(!checkIndexExternalDocumentReferences(documentCreationInformationRequest.getExternalDocumentRefs())) {
+            return false;
+        }
+        if(!checkIndexCreator(documentCreationInformationRequest.getCreator())) {
+            return false;
+        }
+        for (ExternalDocumentReferences externalDocumentReferences: documentCreationInformationRequest.getExternalDocumentRefs()) {
+            if(externalDocumentReferences.getChecksum().getIndex() != 0) {
+                throw new HttpMessageNotReadableException("Index of Checksum DocumentCreationInformation invalid!");
+            }
+        }
+
+        return true;
+    }
+
+    public boolean validateIndexPackageInformation(PackageInformation packageInformationRequest) {
+        if(!checkIndexExternalReference(packageInformationRequest.getExternalRefs())) {
+            return false;
+        }
+        if(!checkIndexAnnotations(packageInformationRequest.getAnnotations())) {
+            return false;
+        }
+        if(!checkIndexRelationships(packageInformationRequest.getRelationships())) {
+            return false;
+        }
+        if(!checkIndexChecksums(packageInformationRequest.getChecksums())){
+            return false;
+        }
+        return true;
+    }
+
+    public boolean checkIndexCreator(Set<Creator> creators) {
+        List<Integer> indexOfCreators = creators.stream().map(Creator::getIndex).collect(Collectors.toList());
+        if(creators.size() != indexOfCreators.size()) {
+            return false;
+        }
+        return checkDuplicateIndex(indexOfCreators);
+    }
+
+    public boolean checkIndexExternalDocumentReferences(Set<ExternalDocumentReferences> externalDocumentReferences) {
+        List<Integer> indexOfExternalDocumentReferences = externalDocumentReferences.stream().map(ExternalDocumentReferences::getIndex).collect(Collectors.toList());
+        if(externalDocumentReferences.size() != indexOfExternalDocumentReferences.size()) {
+            return false;
+        }
+        return checkDuplicateIndex(indexOfExternalDocumentReferences);
+    }
+
+    public boolean checkIndexExternalReference(Set<ExternalReference> externalReferences) {
+        List<Integer> indexOfExternalReference = externalReferences.stream().map(ExternalReference::getIndex).collect(Collectors.toList());
+        if(externalReferences.size() != indexOfExternalReference.size()) {
+            return false;
+        }
+        return checkDuplicateIndex(indexOfExternalReference);
+    }
+
+    public boolean checkIndexOtherLicensingInformationDetected(Set<OtherLicensingInformationDetected> otherLicensingInformationDetecteds) {
+        List<Integer> indexOfOtherLicensingInformationDetecteds = otherLicensingInformationDetecteds.stream().map(OtherLicensingInformationDetected::getIndex).collect(Collectors.toList());
+        if(otherLicensingInformationDetecteds.size() != indexOfOtherLicensingInformationDetecteds.size()) {
+            return false;
+        }
+        return checkDuplicateIndex(indexOfOtherLicensingInformationDetecteds);
+    }
+
+    public boolean checkIndexSnippetInformations(Set<SnippetInformation> snippetInformations) {
+        List<Integer> indexOfSnippetInformations = snippetInformations.stream().map(SnippetInformation::getIndex).collect(Collectors.toList());
+        if(snippetInformations.size() != indexOfSnippetInformations.size()) {
+            return false;
+        }
+        return checkDuplicateIndex(indexOfSnippetInformations);
+    }
+
+    public boolean checkIndexSnippetRanges(Set<SnippetInformation> snippetInformations) {
+        if(CommonUtils.isNullOrEmptyCollection(snippetInformations)) {
+            return true;
+        }
+        Set<SnippetRange> snippetRanges = new HashSet<>();
+        for (SnippetInformation snippetInformation: snippetInformations) {
+            if(!CommonUtils.isNullOrEmptyCollection(snippetInformation.getSnippetRanges())) {
+                if(!checkDuplicateIndex(snippetInformation.getSnippetRanges().stream().map(SnippetRange::getIndex).collect(Collectors.toList()))) {
+                    return false;
+                }
+                snippetRanges.addAll(snippetInformation.getSnippetRanges());
+            }
+        }
+        List<Integer> indexOfSnippetRanges = snippetRanges.stream().map(SnippetRange::getIndex).collect(Collectors.toList());
+        if(snippetRanges.size() != indexOfSnippetRanges.size()) {
+            return false;
+        }
+        return true;
+    }
+
+    public boolean checkIndexRelationships(Set<RelationshipsBetweenSPDXElements> relationships) {
+        List<Integer> indexOfRelationShips = relationships.stream().map(RelationshipsBetweenSPDXElements::getIndex).collect(Collectors.toList());
+        if(relationships.size() != indexOfRelationShips.size()) {
+            return false;
+        }
+        return checkDuplicateIndex(indexOfRelationShips);
+    }
+
+    public boolean checkIndexAnnotations(Set<Annotations> annotations) {
+        List<Integer> indexOfAnnotaions = annotations.stream().map(Annotations::getIndex).collect(Collectors.toList());
+        if(annotations.size() != indexOfAnnotaions.size()) {
+            return false;
+        }
+        return checkDuplicateIndex(indexOfAnnotaions);
+    }
+
+    public boolean checkIndexChecksums(Set<CheckSum> checkSums) {
+        List<Integer> indexOfCheckSums = checkSums.stream().map(CheckSum::getIndex).collect(Collectors.toList());
+        if(checkSums.size() != indexOfCheckSums.size()) {
+            return false;
+        }
+        return checkDuplicateIndex(indexOfCheckSums);
+    }
+
+    public boolean checkDuplicateIndex(List<Integer> indexes) {
+        int sizeIndexes = indexes.size();
+        if(sizeIndexes == 1 && indexes.get(0) == 0) {
+            return true;
+        }
+        int sumIndex = indexes.stream().mapToInt(Integer::intValue).sum();
+        int sumActualIndex = ((sizeIndexes -1) * ((sizeIndexes -1) + 1))/2;
+        return sumIndex == sumActualIndex;
+    }
+
 }
