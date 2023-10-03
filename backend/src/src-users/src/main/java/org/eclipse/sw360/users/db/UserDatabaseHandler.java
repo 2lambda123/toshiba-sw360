@@ -78,7 +78,7 @@ public class UserDatabaseHandler {
         userSearchHandler = new UserSearchHandler(dbConnector, httpClient);
     }
 
-    public UserDatabaseHandler(Supplier<CloudantClient> httpClient,Supplier<HttpClient> client, String dbName) throws IOException {
+    public UserDatabaseHandler(Supplier<CloudantClient> httpClient, Supplier<HttpClient> client, String dbName) throws IOException {
         // Create the connector
         db = new DatabaseConnectorCloudant(httpClient, dbName);
         dbConnector = new DatabaseConnector(client, dbName);
@@ -170,7 +170,7 @@ public class UserDatabaseHandler {
         return repository.getEmailsByDepartmentName(departmentKey);
     }
 
-    public RequestSummary importFileToDB(String pathFolder)  {
+    public RequestSummary importFileToDB(String pathFolder) {
         departmentDuplicate = new ArrayList<>();
         emailDoNotExist = new ArrayList<>();
         List<String> listFileSuccess = new ArrayList<>();
@@ -328,21 +328,10 @@ public class UserDatabaseHandler {
 
     public Map<String, List<User>> getAllUserByDepartment() {
         List<User> users = repository.getAll();
-        Map<String, List<User>> listMap = new HashMap<>();
-        for (User user : users) {
-            if (user.getSecondaryDepartmentsAndRoles() != null) {
-                user.getSecondaryDepartmentsAndRoles().forEach((key, value) -> {
-                    if (listMap.containsKey(key)) {
-                        List<User> list = listMap.get(key);
-                        list.add(user);
-                    } else {
-                        List<User> list = new ArrayList<>();
-                        list.add(user);
-                        listMap.put(key, list);
-                    }
-                });
-            }
-        }
+        Map<String, List<User>> listMap = users.stream()
+                .filter(user -> user.getDepartment() != null)
+                .collect(Collectors.groupingBy(User::getDepartment));
+
         return listMap;
     }
 
@@ -358,15 +347,14 @@ public class UserDatabaseHandler {
     }
 
     public List<String> getAllEmailOtherDepartment(String departmentKey) {
-        Set<String> emailsbyDepartment = getAllEmailsByDepartmentKey(departmentKey);
-        Set<String> emailByListUser = getUserEmails();
-
+        Set<String> emailsByDepartment = getAllEmailsByDepartmentKey(departmentKey);
         List<User> users = repository.getAll();
-        for (User user : users) {
-            emailByListUser.add(user.getEmail());
-        }
+        Set<String> emailByListUser = users.stream()
+                .filter(user -> user.getEmail() != null)
+                .map(user -> user.getEmail())
+                .collect(Collectors.toSet());
         List<String> emailOtherDepartment = new ArrayList<>(emailByListUser);
-        emailOtherDepartment.removeAll(emailsbyDepartment);
+        emailOtherDepartment.removeAll(emailsByDepartment);
         return emailOtherDepartment;
     }
 
@@ -382,10 +370,16 @@ public class UserDatabaseHandler {
     }
 
     public Map<String, User> validateListEmailExistDB(Map<String, List<String>> mapList) {
+        if (mapList.isEmpty()) {
+            throw new NullPointerException("List Emails Empty");
+        }
+
         Map<String, User> listUser = new HashMap<>();
-        Set<String> setEmail = new HashSet<>();
-        mapList.forEach((v, k) -> setEmail.addAll(k));
-        for (String email : setEmail) {
+        Set<String> emails = mapList.entrySet().stream()
+                .flatMap(email -> email.getValue().stream())
+                .collect(Collectors.toSet());
+
+        for (String email : emails) {
             User user = repository.getByEmail(email);
             if (user == null) {
                 emailDoNotExist.add(email);
@@ -393,25 +387,25 @@ public class UserDatabaseHandler {
                 listUser.put(email, user);
             }
         }
+
         return listUser;
     }
 
     public void updateDepartmentToUser(User user, String department) {
-        Map<String, Set<UserGroup>> map;
+        Map<String, Set<UserGroup>> maps;
         Set<UserGroup> userGroups = new HashSet<>();
         if (user.getSecondaryDepartmentsAndRoles() != null) {
-            map = user.getSecondaryDepartmentsAndRoles();
-            for (Map.Entry<String, Set<UserGroup>> entry : map.entrySet()) {
-                if (entry.getKey().equals(department)) {
-                    userGroups = entry.getValue();
-                }
-            }
+            maps = user.getSecondaryDepartmentsAndRoles();
+            userGroups = maps.entrySet().stream()
+                    .filter(map -> map.getKey().equals(department))
+                    .flatMap(map -> map.getValue().stream())
+                    .collect(Collectors.toSet());
         } else {
-            map = new HashMap<>();
+            maps = new HashMap<>();
         }
         userGroups.add(UserGroup.USER);
-        map.put(department, userGroups);
-        user.setSecondaryDepartmentsAndRoles(map);
+        maps.put(department, userGroups);
+        user.setSecondaryDepartmentsAndRoles(maps);
         repository.update(user);
     }
 
@@ -423,15 +417,13 @@ public class UserDatabaseHandler {
     }
 
     public void deleteDepartmentByUser(User user, String departmentKey) {
-        Map<String, Set<UserGroup>> map = user.getSecondaryDepartmentsAndRoles();
-        Set<UserGroup> userGroups = new HashSet<>();
-        for (Map.Entry<String, Set<UserGroup>> entry : map.entrySet()) {
-            if (entry.getKey().equals(departmentKey)) {
-                userGroups = entry.getValue();
-            }
-        }
-        map.remove(departmentKey, userGroups);
-        user.setSecondaryDepartmentsAndRoles(map);
+        Map<String, Set<UserGroup>> maps = user.getSecondaryDepartmentsAndRoles();
+        Set<UserGroup> userGroups = maps.entrySet().stream()
+                .filter(map -> map.getKey().equals(departmentKey))
+                .flatMap(map -> map.getValue().stream())
+                .collect(Collectors.toSet());
+        maps.remove(departmentKey, userGroups);
+        user.setSecondaryDepartmentsAndRoles(maps);
         repository.update(user);
     }
 
@@ -443,15 +435,16 @@ public class UserDatabaseHandler {
     }
 
     public List<User> getAllUserByEmails(List<String> emails) {
-        List<User> users = new ArrayList<>();
-        for (String email : emails) {
-            if (getByEmail(email) != null) {
-                users.add(getByEmail(email));
-            }
+        if (CommonUtils.isNotEmpty(emails)) {
+            throw new NullPointerException("Emails Empty!");
         }
+        List<User> users = emails.stream()
+                .map(email -> getByEmail((email)))
+                .filter(user -> user != null)
+                .collect(Collectors.toList());
         return users;
     }
-    
+
     public User getByOidcClientId(String clientId) {
         return repository.getByOidcClientId(clientId);
     }

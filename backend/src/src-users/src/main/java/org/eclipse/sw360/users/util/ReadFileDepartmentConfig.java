@@ -29,16 +29,14 @@ public class ReadFileDepartmentConfig {
     private static final Logger log = LogManager.getLogger(ReadFileDepartmentConfig.class);
     private static final String FOLDER_LOG = "/logs/";
 
-    protected String getPathConfig() throws IOException {
+    private String getPathConfig() throws IOException {
         StringBuilder path = new StringBuilder("/");
         File file = File.createTempFile("check", "text");
         String pathFile = file.getPath();
         String[] parts = pathFile.split("/");
         for (int i = 0; i < parts.length; i++) {
-            if (!parts[i+1].contains("liferay"))
-                path.append(parts[i+1]).append("/");
-            else {
-                path.append(parts[i+1]).append("/");
+            path.append(parts[i+1]).append("/");
+            if (parts[i+1].contains("liferay")) {
                 break;
             }
         }

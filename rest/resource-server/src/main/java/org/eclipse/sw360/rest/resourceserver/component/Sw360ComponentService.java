@@ -97,6 +97,7 @@ public class Sw360ComponentService implements AwareOfRestServices<Component> {
 
         return projectService.getProjectsByReleaseIds(releaseIds, sw360User);
     }
+
     public List<Component> getComponentSubscriptions(User sw360User) throws TException {
         ComponentService.Iface sw360ComponentClient = getThriftComponentClient();
         return sw360ComponentClient.getSubscribedComponents(sw360User);
@@ -176,16 +177,16 @@ public class Sw360ComponentService implements AwareOfRestServices<Component> {
         return sw360ComponentClient.searchComponentForExport(name.toLowerCase(), false);
     }
 
-    public List<Release> getReleasesByComponentId(String id,User user) throws TException {
+    public List<Release> getReleasesByComponentId(String id, User user) throws TException {
         ComponentService.Iface sw360ComponentClient = getThriftComponentClient();
         return sw360ComponentClient.getReleasesFullDocsFromComponentId(id, user);
     }
 
-    public List<ReleaseLink> convertReleaseToReleaseLink(String id,User user) throws TException {
-        List<Release> releases = getReleasesByComponentId(id,user);
+    public List<ReleaseLink> convertReleaseToReleaseLink(String id, User user) throws TException {
+        List<Release> releases = getReleasesByComponentId(id, user);
         List<ReleaseLink> releaseLinks = new ArrayList<>();
         releases.forEach(release -> {
-            ReleaseLink releaseLink =new ReleaseLink();
+            ReleaseLink releaseLink = new ReleaseLink();
             releaseLink.setId(release.getId());
             releaseLink.setName(release.getName());
             releaseLink.setVersion(release.getVersion());
@@ -195,7 +196,7 @@ public class Sw360ComponentService implements AwareOfRestServices<Component> {
             Set<Attachment> attachments = getAttachmentForClearingReport(release);
             if (!attachments.equals(Collections.emptySet())) {
                 Set<Attachment> attachmentsAccepted = getAttachmentsStatusAccept(attachments);
-                if(attachmentsAccepted.size() != 0) {
+                if (attachmentsAccepted.size() != 0) {
                     clearingReport.setClearingReportStatus(ClearingReportStatus.DOWNLOAD);
                     clearingReport.setAttachments(attachmentsAccepted);
                     releaseLink.setClearingReport(clearingReport);
@@ -215,21 +216,23 @@ public class Sw360ComponentService implements AwareOfRestServices<Component> {
         return releaseLinks;
     }
 
-    private Set<Attachment> getAttachmentForClearingReport(Release release){
+    private Set<Attachment> getAttachmentForClearingReport(Release release) {
         final Set<Attachment> attachments = release.getAttachments();
         if (CommonUtils.isNullOrEmptyCollection(attachments))
             return Collections.emptySet();
-        return attachments.stream().filter(attachment -> AttachmentType.COMPONENT_LICENSE_INFO_XML.equals(attachment.getAttachmentType()) ||
-                                                         AttachmentType.CLEARING_REPORT.equals(attachment.getAttachmentType()))
-                                   .collect(Collectors.toSet());
+        return attachments.stream()
+                .filter(attachment -> AttachmentType.COMPONENT_LICENSE_INFO_XML.equals(attachment.getAttachmentType()) ||
+                        AttachmentType.CLEARING_REPORT.equals(attachment.getAttachmentType()))
+                .collect(Collectors.toSet());
     }
 
-    private Set<Attachment> getAttachmentsStatusAccept(Set<Attachment> attachments){
-        return attachments.stream().filter(attachment -> CheckStatus.ACCEPTED.equals(attachment.getCheckStatus()))
-                                   .collect(Collectors.toSet());
+    private Set<Attachment> getAttachmentsStatusAccept(Set<Attachment> attachments) {
+        return attachments.stream()
+                .filter(attachment -> CheckStatus.ACCEPTED.equals(attachment.getCheckStatus()))
+                .collect(Collectors.toSet());
     }
 
-    private Boolean checkStatusAttachment(Release release){
+    private Boolean checkStatusAttachment(Release release) {
         final Set<Attachment> attachments = release.getAttachments();
         boolean checkStatusAttachment = attachments.stream().anyMatch(attachment ->
                 CheckStatus.ACCEPTED.equals(attachment.getCheckStatus()));
@@ -252,12 +255,12 @@ public class Sw360ComponentService implements AwareOfRestServices<Component> {
         ComponentService.Iface sw360ComponentClient = getThriftComponentClient();
         return sw360ComponentClient.getMyComponents(sw360User);
     }
-    
+
     public List<VulnerabilityDTO> getVulnerabilitiesByComponent(String componentId, User sw360User) throws TException {
         ComponentService.Iface sw360ComponentClient = getThriftComponentClient();
         List<String> releaseIds = sw360ComponentClient.getReleaseIdsFromComponentId(componentId, sw360User);
         List<VulnerabilityDTO> vulnerabilityDTOByComponent = new ArrayList<>();
-        for (String releaseId: releaseIds) {
+        for (String releaseId : releaseIds) {
             vulnerabilityDTOByComponent.addAll(vulnerabilityService.getVulnerabilitiesByReleaseId(releaseId, sw360User));
         }
         return vulnerabilityDTOByComponent;
@@ -278,10 +281,10 @@ public class Sw360ComponentService implements AwareOfRestServices<Component> {
         return sw360ComponentClient.prepareImportBom(user, attachmentContentId);
     }
 
-  public RequestStatus mergeComponents(String componentTargetId, String componentSourceId, Component componentSelection, User user) throws TException {
+    public RequestStatus mergeComponents(String componentTargetId, String componentSourceId, Component componentSelection, User user) throws TException {
         ComponentService.Iface sw360ComponentClient = getThriftComponentClient();
         RequestStatus requestStatus;
-        requestStatus =  sw360ComponentClient.mergeComponents(componentTargetId, componentSourceId, componentSelection, user);
+        requestStatus = sw360ComponentClient.mergeComponents(componentTargetId, componentSourceId, componentSelection, user);
 
         if (requestStatus == RequestStatus.IN_USE) {
             throw new HttpMessageNotReadableException("Component already in use.");
@@ -292,7 +295,7 @@ public class Sw360ComponentService implements AwareOfRestServices<Component> {
         }
 
         return requestStatus;
-  }
+    }
 
     public RequestStatus splitComponents(Component srcComponent, Component targetComponent, User sw360User) throws TException {
         ComponentService.Iface sw360ComponentClient = getThriftComponentClient();

@@ -113,14 +113,14 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
     public static final String RELEASES_URL = "/releases";
     private static final Logger log = LogManager.getLogger(ReleaseController.class);
     private static final Map<String, ReentrantLock> mapOfLocks = new HashMap<String, ReentrantLock>();
-    private static final ImmutableMap<Release._Fields,String> mapOfFieldsTobeEmbedded = ImmutableMap.of(
+    private static final ImmutableMap<Release._Fields, String> mapOfFieldsTobeEmbedded = ImmutableMap.of(
             Release._Fields.MODERATORS, "sw360:moderators",
             Release._Fields.ATTACHMENTS, "sw360:attachments",
             Release._Fields.COTS_DETAILS, "sw360:cotsDetails",
-            Release._Fields.RELEASE_ID_TO_RELATIONSHIP,"sw360:releaseIdToRelationship",
+            Release._Fields.RELEASE_ID_TO_RELATIONSHIP, "sw360:releaseIdToRelationship",
             Release._Fields.CLEARING_INFORMATION, "sw360:clearingInformation");
     private static final ImmutableMap<Release._Fields, String[]> mapOfBackwardCompatible_Field_OldFieldNames_NewFieldNames = ImmutableMap.<Release._Fields, String[]>builder()
-            .put(Release._Fields.SOURCE_CODE_DOWNLOADURL, new String[] { "downloadurl", "sourceCodeDownloadurl" })
+            .put(Release._Fields.SOURCE_CODE_DOWNLOADURL, new String[]{"downloadurl", "sourceCodeDownloadurl"})
             .build();
     private static final ImmutableMap<String, String> RESPONSE_BODY_FOR_MODERATION_REQUEST = ImmutableMap.<String, String>builder()
             .put("message", "Moderation request is created").build();
@@ -166,7 +166,7 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
             sw360Releases.addAll(releaseService.getReleasesForUser(sw360User));
         }
 
-        for(Release release: sw360Releases) {
+        for (Release release : sw360Releases) {
             releaseService.setComponentDependentFieldsInRelease(release, sw360User);
         }
 
@@ -174,8 +174,8 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
                 .filter(release -> name == null || name.isEmpty() || release.getName().equalsIgnoreCase(name))
                 .collect(Collectors.toList());
         if (allDetails) {
-            for (Release release: sw360Releases) {
-                if(!CommonUtils.isNullEmptyOrWhitespace(release.getVendorId())) {
+            for (Release release : sw360Releases) {
+                if (!CommonUtils.isNullEmptyOrWhitespace(release.getVendorId())) {
                     release.setVendor(vendorService.getVendorById(release.getVendorId()));
                 }
             }
@@ -184,7 +184,7 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
 
         List<EntityModel> releaseResources = new ArrayList<>();
         for (Release sw360Release : paginationResult.getResources()) {
-            EntityModel<Release> releaseResource = null;
+            EntityModel<Release> releaseResource;
             if (!allDetails) {
                 Release embeddedRelease = restControllerHelper.convertToEmbeddedRelease(sw360Release, fields);
                 releaseResource = EntityModel.of(embeddedRelease);
@@ -251,7 +251,7 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
         User user = restControllerHelper.getSw360UserFromAuthentication();
         final List<VulnerabilityDTO> allVulnerabilityDTOs = vulnerabilityService.getVulnerabilitiesByReleaseId(id, user);
         CollectionModel<VulnerabilityDTO> resources = CollectionModel.of(allVulnerabilityDTOs);
-        return new ResponseEntity<>(resources,HttpStatus.OK);
+        return new ResponseEntity<>(resources, HttpStatus.OK);
     }
 
     @GetMapping(value = RELEASES_URL + "/mySubscriptions")
@@ -284,9 +284,9 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
         });
 
         sw360Components.forEach(c -> {
-                    Component embeddedComponent = restControllerHelper.convertToEmbeddedComponent(c);
-                    resources.add(EntityModel.of(embeddedComponent));
-                });
+            Component embeddedComponent = restControllerHelper.convertToEmbeddedComponent(c);
+            resources.add(EntityModel.of(embeddedComponent));
+        });
 
         RestrictedResource restrictedResource = new RestrictedResource();
         restrictedResource.setProjects(releaseService.countProjectsByReleaseId(id) - sw360Projects.size());
@@ -328,9 +328,9 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
             @PathVariable("ids") List<String> idsToDelete) throws TException {
         User user = restControllerHelper.getSw360UserFromAuthentication();
         List<MultiStatus> results = new ArrayList<>();
-        for(String id:idsToDelete) {
+        for (String id : idsToDelete) {
             RequestStatus requestStatus = releaseService.deleteRelease(id, user);
-            if(requestStatus == RequestStatus.SUCCESS) {
+            if (requestStatus == RequestStatus.SUCCESS) {
                 results.add(new MultiStatus(id, HttpStatus.OK));
             } else if (requestStatus == RequestStatus.SENT_TO_MODERATOR) {
                 results.add(new MultiStatus(id, HttpStatus.ACCEPTED));
@@ -365,27 +365,29 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
     @PreAuthorize("hasAuthority('WRITE')")
     @PatchMapping(value = RELEASES_URL + "/{id}/vulnerabilities")
     public ResponseEntity<CollectionModel<EntityModel<VulnerabilityDTO>>> patchReleaseVulnerabilityRelation(@PathVariable("id") String releaseId,
-                                                      @RequestBody VulnerabilityState vulnerabilityState) throws TException {
+                                                                                                            @RequestBody VulnerabilityState vulnerabilityState) throws TException {
         User user = restControllerHelper.getSw360UserFromAuthentication();
-        if(CommonUtils.isNullOrEmptyCollection(vulnerabilityState.getReleaseVulnerabilityRelationDTOs())) {
+        if (CommonUtils.isNullOrEmptyCollection(vulnerabilityState.getReleaseVulnerabilityRelationDTOs())) {
             throw new HttpMessageNotReadableException("Required field ReleaseVulnerabilityRelation is not present");
         }
-        if(vulnerabilityState.getVerificationState() == null) {
+        if (vulnerabilityState.getVerificationState() == null) {
             throw new HttpMessageNotReadableException("Required field verificationState is not present");
         }
         List<VulnerabilityDTO> actualVDto = vulnerabilityService.getVulnerabilitiesByReleaseId(releaseId, user);
-        Set<String> externalIdsFromRequestDto = vulnerabilityState.getReleaseVulnerabilityRelationDTOs().stream().map(ReleaseVulnerabilityRelationDTO::getExternalId).collect(Collectors.toSet());
+        Set<String> externalIdsFromRequestDto = vulnerabilityState.getReleaseVulnerabilityRelationDTOs().stream()
+                .map(ReleaseVulnerabilityRelationDTO::getExternalId)
+                .collect(Collectors.toSet());
         List<VulnerabilityDTO> actualVDtoFromRequest = vulnerabilityService.getVulnerabilityDTOByExternalId(externalIdsFromRequestDto, releaseId);
-        Set<String> actualExternalId = actualVDto.stream().map(VulnerabilityDTO::getExternalId).collect(Collectors.toSet());
+        Set<String> actualExternalId = actualVDto.stream()
+                .map(VulnerabilityDTO::getExternalId)
+                .collect(Collectors.toSet());
         Set<String> commonExtIds = Sets.intersection(actualExternalId, externalIdsFromRequestDto);
-        if(CommonUtils.isNullOrEmptyCollection(commonExtIds) || commonExtIds.size() != externalIdsFromRequestDto.size()) {
+        if (CommonUtils.isNullOrEmptyCollection(commonExtIds) || commonExtIds.size() != externalIdsFromRequestDto.size()) {
             throw new HttpMessageNotReadableException("External ID is not valid");
         }
 
-        Map<String, ReleaseVulnerabilityRelation> releasemap = new HashMap<>();
-        actualVDtoFromRequest.forEach(vulnerabilityDTO -> {
-            releasemap.put(vulnerabilityDTO.getExternalId(),vulnerabilityDTO.getReleaseVulnerabilityRelation());
-        });
+        Map<String, ReleaseVulnerabilityRelation> releasemap = actualVDtoFromRequest.stream()
+                .collect(Collectors.toMap(VulnerabilityDTO::getExternalId, VulnerabilityDTO::getReleaseVulnerabilityRelation));
         RequestStatus requestStatus = null;
         for (Map.Entry<String, ReleaseVulnerabilityRelation> entry : releasemap.entrySet()) {
             requestStatus = updateReleaseVulnerabilityRelation(releaseId, user, vulnerabilityState.getComment(), vulnerabilityState.getVerificationState(), entry.getKey());
@@ -393,12 +395,12 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
                 break;
             }
         }
-        if (requestStatus == RequestStatus.ACCESS_DENIED){
+        if (requestStatus == RequestStatus.ACCESS_DENIED) {
             throw new HttpMessageNotReadableException("User not allowed!");
         }
         List<VulnerabilityDTO> vulnerabilityDTOList = getVulnerabilityUpdated(externalIdsFromRequestDto, releaseId);
         final List<EntityModel<VulnerabilityDTO>> vulnerabilityResources = new ArrayList<>();
-        vulnerabilityDTOList.forEach(dto->{
+        vulnerabilityDTOList.forEach(dto -> {
             final EntityModel<VulnerabilityDTO> vulnerabilityDTOEntityModel = EntityModel.of(dto);
             vulnerabilityResources.add(vulnerabilityDTOEntityModel);
         });
@@ -410,14 +412,14 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
 
     public RequestStatus updateReleaseVulnerabilityRelation(String releaseId, User user, String comment, VerificationState verificationState, String externalIdRequest) throws TException {
         List<VulnerabilityDTO> vulnerabilityDTOs = vulnerabilityService.getVulnerabilitiesByReleaseId(releaseId, user);
-        ReleaseVulnerabilityRelation releaseVulnerabilityRelation = new ReleaseVulnerabilityRelation();
-        for (VulnerabilityDTO vulnerabilityDTO: vulnerabilityDTOs) {
-            if (vulnerabilityDTO.getExternalId().equals(externalIdRequest)) {
-                releaseVulnerabilityRelation = vulnerabilityDTO.getReleaseVulnerabilityRelation();
-            }
-        }
+        ReleaseVulnerabilityRelation releaseVulnerabilityRelation = vulnerabilityDTOs.stream()
+                .filter(vulnerabilityDTO -> vulnerabilityDTO.getExternalId().equals(externalIdRequest))
+                .map(VulnerabilityDTO::getReleaseVulnerabilityRelation)
+                .findFirst()
+                .get();
+
         ReleaseVulnerabilityRelation relation = updateReleaseVulnerabilityRelationFromRequest(releaseVulnerabilityRelation, comment, verificationState, user);
-        return vulnerabilityService.updateReleaseVulnerabilityRelation(relation,user);
+        return vulnerabilityService.updateReleaseVulnerabilityRelation(relation, user);
     }
 
     public static ReleaseVulnerabilityRelation updateReleaseVulnerabilityRelationFromRequest(ReleaseVulnerabilityRelation dbRelation, String comment, VerificationState verificationState, User user) {
@@ -492,7 +494,7 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
         return new ResponseEntity<>(resources, HttpStatus.OK);
     }
 
-    @GetMapping(value = RELEASES_URL + "/{releaseId}/attachments/download", produces="application/zip")
+    @GetMapping(value = RELEASES_URL + "/{releaseId}/attachments/download", produces = "application/zip")
     public void downloadAttachmentBundleFromRelease(
             @PathVariable("releaseId") String releaseId,
             HttpServletResponse response) throws TException, IOException {
@@ -505,7 +507,7 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
     @PreAuthorize("hasAuthority('WRITE')")
     @PatchMapping(value = RELEASES_URL + "/{id}/attachment/{attachmentId}")
     public ResponseEntity<EntityModel<Attachment>> patchReleaseAttachmentInfo(@PathVariable("id") String id,
-            @PathVariable("attachmentId") String attachmentId, @RequestBody Attachment attachmentData)
+                                                                              @PathVariable("attachmentId") String attachmentId, @RequestBody Attachment attachmentData)
             throws TException {
         final User sw360User = restControllerHelper.getSw360UserFromAuthentication();
         final Release sw360Release = releaseService.getReleaseForUserById(id, sw360User);
@@ -525,7 +527,7 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
                                                               @RequestPart("attachment") Attachment newAttachment) throws TException {
         final User sw360User = restControllerHelper.getSw360UserFromAuthentication();
         final Release release = releaseService.getReleaseForUserById(releaseId, sw360User);
-        Attachment attachment = null;
+        Attachment attachment;
         try {
             attachment = attachmentService.uploadAttachment(file, newAttachment, sw360User);
         } catch (IOException e) {
@@ -597,14 +599,14 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
 
     @RequestMapping(value = RELEASES_URL + "/{id}/triggerFossologyProcess", method = RequestMethod.GET)
     public ResponseEntity<HalResource> triggerFossologyProcess(@PathVariable("id") String releaseId,
-            @RequestParam(value = "markFossologyProcessOutdated", required = false) boolean markFossologyProcessOutdated,
-            @RequestParam(value = "uploadDescription", required = false) String uploadDescription,
-            HttpServletResponse response) throws TException, IOException {
+                                                               @RequestParam(value = "markFossologyProcessOutdated", required = false) boolean markFossologyProcessOutdated,
+                                                               @RequestParam(value = "uploadDescription", required = false) String uploadDescription,
+                                                               HttpServletResponse response) throws TException, IOException {
         releaseService.checkFossologyConnection();
 
         ReentrantLock lock = mapOfLocks.get(releaseId);
         Map<String, String> responseMap = new HashMap<>();
-        HttpStatus status = null;
+        HttpStatus status;
         if (lock == null || !lock.isLocked()) {
             if (mapOfLocks.size() > 10) {
                 responseMap.put("message",
@@ -917,6 +919,7 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
         }
         return halRelease;
     }
+
     private HalResource<Release> createHalReleaseResourceWithAllDetails(Release release) {
         HalResource<Release> halRelease = new HalResource<>(release);
         Link componentLink = linkTo(ReleaseController.class)

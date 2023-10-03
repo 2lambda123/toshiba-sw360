@@ -162,7 +162,7 @@ public class UserHandler implements UserService.Iface {
 
 
     @Override
-    public RequestSummary importFileToDB()  {
+    public RequestSummary importFileToDB() {
         DepartmentConfigDTO configDTO = readFileDepartmentConfig.readFileJson();
         RequestSummary requestSummary = new RequestSummary();
         if (!configDTO.getPathFolder().isEmpty()) {
@@ -172,7 +172,7 @@ public class UserHandler implements UserService.Iface {
     }
 
     @Override
-    public RequestStatus importDepartmentSchedule()  {
+    public RequestStatus importDepartmentSchedule() {
         DepartmentConfigDTO configDTO = readFileDepartmentConfig.readFileJson();
         db.importFileToDB(configDTO.getPathFolder());
         return RequestStatus.SUCCESS;

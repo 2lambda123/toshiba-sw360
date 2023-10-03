@@ -168,7 +168,7 @@ public class Sw360AttachmentService {
     }
 
     private List<AttachmentInfo> createAttachmentInfos(AttachmentService.Iface attachmentClient,
-            List<Attachment> attachments) throws TException {
+                                                       List<Attachment> attachments) throws TException {
         List<AttachmentInfo> attachmentInfos = new ArrayList<>();
         for (Attachment attachment : attachments) {
             attachmentInfos.add(createAttachmentInfo(attachmentClient, attachment));
@@ -191,7 +191,7 @@ public class Sw360AttachmentService {
         }
     }
 
-    public void downloadAttachmentBundleWithContext (Object context, Set<Attachment> attachments, User user, HttpServletResponse response) throws TException, IOException {
+    public void downloadAttachmentBundleWithContext(Object context, Set<Attachment> attachments, User user, HttpServletResponse response) throws TException, IOException {
         if (CommonUtils.isNullOrEmptyCollection(attachments)) {
             response.setStatus(HttpServletResponse.SC_NO_CONTENT);
             return;
@@ -248,8 +248,7 @@ public class Sw360AttachmentService {
         }
 
         if (checkStatus != null &&
-                (checkStatus == CheckStatus.ACCEPTED || checkStatus == CheckStatus.REJECTED))
-        {
+                (checkStatus == CheckStatus.ACCEPTED || checkStatus == CheckStatus.REJECTED)) {
             if (CommonUtils.isNotNullEmptyOrWhitespace(attachment.getCreatedBy())) {
                 attachment.setCheckedBy(attachment.getCreatedBy());
             }
@@ -310,7 +309,7 @@ public class Sw360AttachmentService {
     }
 
     public CollectionModel<EntityModel<AttachmentDTO>> getAttachmentDTOResourcesFromList(User user, Set<Attachment> attachments, Source owner) throws TTransportException {
-        Map<Attachment,UsageAttachment> attachmentUsageAttachmentMap = getAttachmentUsages(user, attachments, owner);
+        Map<Attachment, UsageAttachment> attachmentUsageAttachmentMap = getAttachmentUsages(user, attachments, owner);
         Set<AttachmentDTO> attachmentDTOs = getAttachmentDTOs(attachments, attachmentUsageAttachmentMap);
         final List<EntityModel<AttachmentDTO>> attachmentResources = new ArrayList<>();
         if (CommonUtils.isNotEmpty(attachmentDTOs)) {
@@ -408,7 +407,7 @@ public class Sw360AttachmentService {
     }
 
     private File renameFile(File sourceFile, String filename) throws IOException {
-        String pathFile = sourceFile.getPath().substring(0,sourceFile.getPath().lastIndexOf("/"));
+        String pathFile = sourceFile.getPath().substring(0, sourceFile.getPath().lastIndexOf("/"));
         StringBuilder newName = new StringBuilder(pathFile);
         newName.append("/");
         newName.append(filename);
@@ -454,12 +453,12 @@ public class Sw360AttachmentService {
                 Set<ProjectUsage> projectUsages = getProjectAttachmentUsages(attachmentUsages, user);
                 long numberProjectByAttachmentUsages = distinctProjectIdsFromAttachmentUsages(attachmentUsages).count();
 
-                UsageAttachment usage =  new UsageAttachment();
+                UsageAttachment usage = new UsageAttachment();
                 usage.setVisible(numberProjectByAttachmentUsages);
                 usage.setRestricted(stringLongEntry.getValue());
                 usage.setProjectUsages(projectUsages);
 
-                attachmentUsageMap.put(attachment,usage);
+                attachmentUsageMap.put(attachment, usage);
             } catch (TException e) {
                 log.error("Cannot load map attachment usages", e);
             }
@@ -467,7 +466,7 @@ public class Sw360AttachmentService {
         return attachmentUsageMap;
     }
 
-    private  Set<ProjectUsage> getProjectAttachmentUsages(List<AttachmentUsage> attachmentUsages, User user) {
+    private Set<ProjectUsage> getProjectAttachmentUsages(List<AttachmentUsage> attachmentUsages, User user) {
         Set<ProjectUsage> projectUsages = new HashSet<>();
         attachmentUsages.stream().forEach(attachmentUsage -> {
             try {
@@ -514,7 +513,7 @@ public class Sw360AttachmentService {
         return new ProjectService.Client(protocol);
     }
 
-    private Stream<String> distinctProjectIdsFromAttachmentUsages (List<AttachmentUsage> usages){
+    private Stream<String> distinctProjectIdsFromAttachmentUsages(List<AttachmentUsage> usages) {
         return nullToEmptyList(usages).stream()
                 .map(AttachmentUsage::getUsedBy)
                 .map(Source::getProjectId)
@@ -538,15 +537,15 @@ public class Sw360AttachmentService {
         return attachments.get(0);
     }
 
-    public Set<AttachmentDTO> getAttachmentDTOs(Set<Attachment> attachments, Map<Attachment,UsageAttachment> attachmentUsages ) {
+    public Set<AttachmentDTO> getAttachmentDTOs(Set<Attachment> attachments, Map<Attachment, UsageAttachment> attachmentUsages) {
         Set<AttachmentDTO> attachmentDTOS = new HashSet<>();
         attachmentUsages.entrySet().stream().forEach(attachmentUsageEntry -> {
             attachments.remove(attachmentUsageEntry.getKey());
-            AttachmentDTO attachmentDTO = restControllerHelper.convertAttachmentToAttachmentDTO(attachmentUsageEntry.getKey(),attachmentUsageEntry.getValue());
+            AttachmentDTO attachmentDTO = restControllerHelper.convertAttachmentToAttachmentDTO(attachmentUsageEntry.getKey(), attachmentUsageEntry.getValue());
             attachmentDTOS.add(attachmentDTO);
         });
         attachments.forEach(attachment -> {
-            AttachmentDTO attachmentDTO = restControllerHelper.convertAttachmentToAttachmentDTO(attachment,new UsageAttachment());
+            AttachmentDTO attachmentDTO = restControllerHelper.convertAttachmentToAttachmentDTO(attachment, new UsageAttachment());
             attachmentDTOS.add(attachmentDTO);
         });
         return attachmentDTOS;
