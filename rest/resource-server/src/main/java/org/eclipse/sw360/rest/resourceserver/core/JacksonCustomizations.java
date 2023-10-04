@@ -796,6 +796,8 @@ public class JacksonCustomizations {
                 "setRelationships",
                 "annotationsIterator",
                 "setAnnotations",
+                "snippetsIterator",
+                "spdxPackageInfoIdsIterator",
                 "otherLicensingInformationDetectedsIterator",
                 "setOtherLicensingInformationDetecteds",
         })
@@ -883,6 +885,7 @@ public class JacksonCustomizations {
                 "setBuiltDate",
                 "setValidUntilDate",
                 "setIndex",
+                "attributionTextIterator"
         })
         static abstract class PackageInformationMixin extends PackageInformation {
         }
