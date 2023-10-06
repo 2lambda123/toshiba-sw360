@@ -11,6 +11,7 @@
  */
 package org.eclipse.sw360.rest.resourceserver.release;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static org.eclipse.sw360.datahandler.common.WrappedException.wrapTException;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 
@@ -46,12 +47,7 @@ import org.eclipse.sw360.datahandler.common.SW360Utils;
 import org.eclipse.sw360.datahandler.resourcelists.PaginationParameterException;
 import org.eclipse.sw360.datahandler.resourcelists.PaginationResult;
 import org.eclipse.sw360.datahandler.resourcelists.ResourceClassNotFoundException;
-import org.eclipse.sw360.datahandler.thrift.ReleaseRelationship;
-import org.eclipse.sw360.datahandler.thrift.RequestStatus;
-import org.eclipse.sw360.datahandler.thrift.Source;
-import org.eclipse.sw360.datahandler.thrift.VerificationState;
-import org.eclipse.sw360.datahandler.thrift.VerificationStateInfo;
-import org.eclipse.sw360.datahandler.thrift.RestrictedResource;
+import org.eclipse.sw360.datahandler.thrift.*;
 import org.eclipse.sw360.datahandler.thrift.attachments.Attachment;
 import org.eclipse.sw360.datahandler.thrift.attachments.AttachmentDTO;
 import org.eclipse.sw360.datahandler.thrift.attachments.AttachmentType;
@@ -61,12 +57,16 @@ import org.eclipse.sw360.datahandler.thrift.licenseinfo.LicenseInfo;
 import org.eclipse.sw360.datahandler.thrift.licenseinfo.LicenseInfoParsingResult;
 import org.eclipse.sw360.datahandler.thrift.licenseinfo.LicenseNameWithText;
 import org.eclipse.sw360.datahandler.thrift.licenseinfo.LicenseInfoParsingResult;
+import org.eclipse.sw360.datahandler.thrift.packages.Package;
 import org.eclipse.sw360.datahandler.thrift.projects.Project;
 import org.eclipse.sw360.datahandler.thrift.components.Component;
 import org.eclipse.sw360.datahandler.thrift.components.ExternalToolProcess;
 import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.DocumentCreationInformation;
+import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.DocumentCreationInformationService;
 import org.eclipse.sw360.datahandler.thrift.spdx.spdxdocument.SPDXDocument;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxdocument.SPDXDocumentService;
 import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformation;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformationService;
 import org.eclipse.sw360.datahandler.thrift.users.User;
 import org.eclipse.sw360.datahandler.thrift.vendors.Vendor;
 import org.eclipse.sw360.datahandler.thrift.vulnerabilities.ReleaseVulnerabilityRelation;
@@ -502,6 +502,64 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
                 .buildAndExpand(sw360Release.getId()).toUri();
 
         return ResponseEntity.created(location).body(halResource);
+    }
+
+    @PreAuthorize("hasAuthority('WRITE')")
+    @PostMapping(value = "/spdx")
+    public ResponseEntity<?> createSPDX( @RequestBody Map<String, Object> reqBodyMap) throws TException {
+        User user = restControllerHelper.getSw360UserFromAuthentication();
+        SPDXDocument spdxDocument = new SPDXDocument();
+        DocumentCreationInformation documentCreationInformation = new DocumentCreationInformation();
+        PackageInformation packageInformation = new PackageInformation();
+        if (null != reqBodyMap.get("spdxDocument")) {
+            spdxDocument = convertToSPDXDocument(reqBodyMap.get("spdxDocument"));
+        }
+        if (null != reqBodyMap.get("documentCreationInformation")) {
+            documentCreationInformation = convertToDocumentCreationInformation(reqBodyMap.get("documentCreationInformation"));
+        }
+        if (null != reqBodyMap.get("packageInformation")) {
+            packageInformation = convertToPackageInformation(reqBodyMap.get("packageInformation"));
+        }
+
+        String spdxDocumentId = "";
+
+        SPDXDocumentService.Iface spdxClient = new ThriftClients().makeSPDXClient();
+        DocumentCreationInformationService.Iface documentClient = new ThriftClients().makeSPDXDocumentInfoClient();
+        PackageInformationService.Iface packageClient = new ThriftClients().makeSPDXPackageInfoClient();
+        spdxDocumentId = spdxClient.addSPDXDocument(spdxDocument, user).getId();
+
+        if (isNullOrEmpty(documentCreationInformation.getSpdxDocumentId())) {
+            documentCreationInformation.setSpdxDocumentId(spdxDocumentId);
+        }
+        documentClient.addDocumentCreationInformation(documentCreationInformation, user);
+
+        if (isNullOrEmpty(packageInformation.getSpdxDocumentId())) {
+            packageInformation.setSpdxDocumentId(spdxDocumentId);
+        }
+        packageClient.addPackageInformation(packageInformation, user);
+
+        return ResponseEntity.ok(spdxDocumentId);
+    }
+
+    public SPDXDocument convertToSPDXDocument(Object object) {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        mapper.registerModule(sw360Module);
+        return mapper.convertValue(object, SPDXDocument.class);
+    }
+
+    public DocumentCreationInformation convertToDocumentCreationInformation(Object object) {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        mapper.registerModule(sw360Module);
+        return mapper.convertValue(object, DocumentCreationInformation.class);
+    }
+
+    public PackageInformation convertToPackageInformation(Object object) {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        mapper.registerModule(sw360Module);
+        return mapper.convertValue(object, PackageInformation.class);
     }
 
     @GetMapping(value = RELEASES_URL + "/{id}/attachments")
