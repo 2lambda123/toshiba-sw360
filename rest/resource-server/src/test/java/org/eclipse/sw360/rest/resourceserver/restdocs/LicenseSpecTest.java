@@ -11,12 +11,9 @@ package org.eclipse.sw360.rest.resourceserver.restdocs;
 
 import org.apache.thrift.TException;
 import org.eclipse.sw360.datahandler.thrift.RequestStatus;
-import org.eclipse.sw360.datahandler.thrift.licenses.License;
+import org.eclipse.sw360.datahandler.thrift.licenses.*;
 import org.eclipse.sw360.rest.resourceserver.TestHelper;
 import org.eclipse.sw360.rest.resourceserver.license.Sw360LicenseService;
-import org.eclipse.sw360.datahandler.thrift.licenses.Obligation;
-import org.eclipse.sw360.datahandler.thrift.licenses.ObligationLevel;
-import org.eclipse.sw360.datahandler.thrift.licenses.ObligationType;
 import org.eclipse.sw360.datahandler.thrift.Quadratic;
 import org.eclipse.sw360.rest.resourceserver.user.Sw360UserService;
 import org.junit.Before;
@@ -61,7 +58,7 @@ public class LicenseSpecTest extends TestRestDocsSpecBase {
     @MockBean
     private Sw360LicenseService licenseServiceMock;
 
-    private License license, license3;
+    private License license, license2, license3;
     private Obligation obligation1, obligation2;
 
     @Before
@@ -80,7 +77,7 @@ public class LicenseSpecTest extends TestRestDocsSpecBase {
         license.setNote("License's Note");
         license.setExternalLicenseLink("https://spdx.org/licenses/Apache-2.0.html");
 
-        License license2 = new License();
+        license2 = new License();
         license2.setId("MIT");
         license2.setFullname("The MIT License (MIT)");
         license2.setShortname("MIT");
@@ -121,12 +118,73 @@ public class LicenseSpecTest extends TestRestDocsSpecBase {
         obligation2.setWhitelist(Collections.singleton("Department2"));
         obligation2.setObligationType(ObligationType.OBLIGATION);
         obligation2.setObligationLevel(ObligationLevel.LICENSE_OBLIGATION);
+
+        List<Obligation> obligations = Arrays.asList(obligation1, obligation2);
+        Set<String> obligationIds = new HashSet<>(Arrays.asList(obligation1.getId(), obligation2.getId()));
+        license2.setObligationDatabaseIds(obligationIds);
+        license2.setObligations(obligations);
+        given(this.licenseServiceMock.getObligationsByLicenseId(any())).willReturn(obligations);
+        given(this.licenseServiceMock.getIdObligationsContainWhitelist(any(),any(),any())).willReturn(new HashSet<>(Arrays.asList("0001","0002")));
+
+        LicenseType licenseType = new LicenseType(1,"Public domain");
+        licenseType.setId("0443dda0b9ef420fa1f200e497efc98f");
+        LicenseType licenseType1 = new LicenseType(2,"Proprietary license");
+        licenseType1.setId("9e86774d0769e77bdf5902f936cb55c3");
+        List<LicenseType> licenseTypes = new ArrayList<>(Arrays.asList(licenseType,licenseType1));
+        given(this.licenseServiceMock.getLicenseTypes()).willReturn(licenseTypes);
     }
 
     @Test
     public void should_document_get_licenses() throws Exception {
         String accessToken = TestHelper.getAccessToken(mockMvc, testUserId, testUserPassword);
         mockMvc.perform(get("/api/licenses")
+                .header("Authorization", "Bearer " + accessToken)
+                .param("page", "0")
+                .param("page_entries", "5")
+                .accept(MediaTypes.HAL_JSON))
+                .andExpect(status().isOk())
+                .andDo(this.documentationHandler.document(
+                        requestParameters(
+                                parameterWithName("page").description("Page of licenses"),
+                                parameterWithName("page_entries").description("Amount of licenses per page")
+                        ),
+                        links(
+                                linkWithRel("curies").description("Curies are used for online documentation"),
+                                linkWithRel("first").description("Link to first page"),
+                                linkWithRel("last").description("Link to last page")
+                        ),
+                        responseFields(
+                                subsectionWithPath("_embedded.sw360:licenses").description("An array of <<resources-licenses, Licenses resources>>"),
+                                subsectionWithPath("_links").description("<<resources-index-links,Links>> to other resources"),
+                                fieldWithPath("page").description("Additional paging information"),
+                                fieldWithPath("page.size").description("Number of licenses per page"),
+                                fieldWithPath("page.totalElements").description("Total number of all existing licenses"),
+                                fieldWithPath("page.totalPages").description("Total number of pages"),
+                                fieldWithPath("page.number").description("Number of the current page")
+                        )));
+    }
+
+    @Test
+    public void should_document_get_license_types() throws Exception {
+        String accessToken = TestHelper.getAccessToken(mockMvc, testUserId, testUserPassword);
+        mockMvc.perform(get("/api/licenseTypes")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .accept(MediaTypes.HAL_JSON))
+                .andExpect(status().isOk())
+                .andDo(this.documentationHandler.document(
+                        links(
+                                linkWithRel("curies").description("Curies are used for online documentation")
+                        ),
+                        responseFields(
+                                subsectionWithPath("_embedded.sw360:licenseTypes").description("An array of <<resources-licenses, licenseTypes resources>>"),
+                                subsectionWithPath("_links").description("<<resources-index-links,Links>> to other resources")
+                        )));
+    }
+
+    @Test
+    public void should_document_get_obligations_by_license() throws Exception {
+        String accessToken = TestHelper.getAccessToken(mockMvc, testUserId, testUserPassword);
+        mockMvc.perform(get("/api/licenses/"+  license2.getId()+ "/obligations")
                 .header("Authorization", "Bearer " + accessToken)
                 .accept(MediaTypes.HAL_JSON))
                 .andExpect(status().isOk())
@@ -135,7 +193,9 @@ public class LicenseSpecTest extends TestRestDocsSpecBase {
                                 linkWithRel("curies").description("Curies are used for online documentation")
                         ),
                         responseFields(
-                                subsectionWithPath("_embedded.sw360:licenses").description("An array of <<resources-licenses, Licenses resources>>"),
+                                subsectionWithPath("_embedded.sw360:obligations[]title").description("The title of the obligation"),
+                                subsectionWithPath("_embedded.sw360:obligations[]obligationType").description("The obligationType of the obligation"),
+                                subsectionWithPath("_embedded.sw360:obligations").description("An array of <<resources-obligations, Obligations resources>>"),
                                 subsectionWithPath("_links").description("<<resources-index-links,Links>> to other resources")
                         )));
     }
@@ -197,18 +257,17 @@ public class LicenseSpecTest extends TestRestDocsSpecBase {
 
     @Test
     public void should_document_update_external_link_license() throws Exception {
+        Map<String, String> requestBody = new HashMap<>();
+        requestBody.put("externalLicenseLink","https://spdx.org/licenses/Apache-3.0.html");
 
         String accessToken = TestHelper.getAccessToken(mockMvc, testUserId, testUserPassword);
         mockMvc.perform(MockMvcRequestBuilders.patch("/api/licenses/" + license.getId() +"/externalLink")
                         .contentType(MediaTypes.HAL_JSON)
-                        .queryParam("externalLicenseLink", "https://spdx.org/licenses/Apache-3.0.html")
+                        .content(this.objectMapper.writeValueAsString(requestBody))
                         .header("Authorization", "Bearer" + accessToken)
                         .accept(MediaTypes.HAL_JSON))
                 .andExpect(status().isOk())
                 .andDo(this.documentationHandler.document(
-                        requestParameters(
-                                parameterWithName("externalLicenseLink").description("The external license link of the license")
-                        ),
                         responseFields(
                                 fieldWithPath("fullName").description("The full name of the license"),
                                 fieldWithPath("shortName").description("The short name of the license, optional"),
@@ -228,23 +287,26 @@ public class LicenseSpecTest extends TestRestDocsSpecBase {
     public void should_document_update_whitelist_license() throws Exception {
         List<Obligation> obligationList = new ArrayList<>();
         obligationList.add(obligation1);
+        obligationList.add(obligation2);
         license.setObligations(obligationList);
 
         Set<String> obligationIds = new HashSet<String>();
         obligationIds.add(obligation1.getId());
+        obligationIds.add(obligation2.getId());
         license.setObligationDatabaseIds(obligationIds);
+
+        Map<String, Boolean> requestBody = new HashMap<>();
+        requestBody.put("0001",true);
+        requestBody.put("0002",true);
 
         String accessToken = TestHelper.getAccessToken(mockMvc, testUserId, testUserPassword);
         mockMvc.perform(MockMvcRequestBuilders.patch("/api/licenses/" + license.getId() +"/whitelist")
                         .contentType(MediaTypes.HAL_JSON)
-                        .queryParam("obligationIds",Collections.singleton("0001").toString())
+                        .content(this.objectMapper.writeValueAsString(requestBody))
                         .header("Authorization", "Bearer" + accessToken)
                         .accept(MediaTypes.HAL_JSON))
                 .andExpect(status().isOk())
                 .andDo(this.documentationHandler.document(
-                        requestParameters(
-                                parameterWithName("obligationIds").description("The Obligation Ids link of the license")
-                        ),
                         responseFields(
                                 fieldWithPath("fullName").description("The full name of the license"),
                                 fieldWithPath("shortName").description("The short name of the license, optional"),

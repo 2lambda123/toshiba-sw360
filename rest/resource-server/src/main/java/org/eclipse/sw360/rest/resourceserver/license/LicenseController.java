@@ -12,18 +12,26 @@
 package org.eclipse.sw360.rest.resourceserver.license;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.thrift.TException;
 import org.eclipse.sw360.datahandler.common.CommonUtils;
+import org.eclipse.sw360.datahandler.common.SW360Constants;
+import org.eclipse.sw360.datahandler.resourcelists.PaginationParameterException;
+import org.eclipse.sw360.datahandler.resourcelists.PaginationResult;
+import org.eclipse.sw360.datahandler.resourcelists.ResourceClassNotFoundException;
 import org.eclipse.sw360.datahandler.thrift.RequestStatus;
+import org.eclipse.sw360.datahandler.thrift.components.Component;
 import org.eclipse.sw360.datahandler.thrift.licenses.License;
+import org.eclipse.sw360.datahandler.thrift.licenses.LicenseType;
 import org.eclipse.sw360.datahandler.thrift.licenses.Obligation;
 import org.eclipse.sw360.datahandler.thrift.users.User;
 import org.eclipse.sw360.rest.resourceserver.core.HalResource;
 import org.eclipse.sw360.rest.resourceserver.core.RestControllerHelper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.data.rest.webmvc.RepositoryLinksResource;
 import org.springframework.hateoas.EntityModel;
@@ -40,11 +48,11 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -56,6 +64,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class LicenseController implements RepresentationModelProcessor<RepositoryLinksResource> {
     public static final String LICENSES_URL = "/licenses";
+    public static final String LICENSE_TYPES_URL = "/licenseTypes";
 
     @NonNull
     private final Sw360LicenseService licenseService;
@@ -67,17 +76,36 @@ public class LicenseController implements RepresentationModelProcessor<Repositor
             .put("message", "Moderation request is created").build();
 
     @RequestMapping(value = LICENSES_URL, method = RequestMethod.GET)
-    public ResponseEntity<CollectionModel<EntityModel<License>>> getLicenses() throws TException {
+    public ResponseEntity<CollectionModel> getLicenses(Pageable pageable, HttpServletRequest request) throws TException, ResourceClassNotFoundException, PaginationParameterException, URISyntaxException {
         List<License> sw360Licenses = licenseService.getLicenses();
-
+        PaginationResult<License> paginationResult = restControllerHelper.createPaginationResult(request, pageable, sw360Licenses, SW360Constants.TYPE_LICENSE);
         List<EntityModel<License>> licenseResources = new ArrayList<>();
-        for (License sw360License : sw360Licenses) {
-            License embeddedLicense = restControllerHelper.convertToEmbeddedLicense(sw360License);
-            EntityModel<License> licenseResource = EntityModel.of(embeddedLicense);
-            licenseResources.add(licenseResource);
+        paginationResult.getResources().stream()
+                .forEach(license -> {
+                    License embeddedLicense = restControllerHelper.convertToEmbeddedLicense(license);
+                    EntityModel<License> licenseResource = EntityModel.of(embeddedLicense);
+                    licenseResources.add(licenseResource);
+                });
+        CollectionModel resources;
+        if (licenseResources.size() == 0) {
+            resources = restControllerHelper.emptyPageResource(License.class, paginationResult);
+        } else {
+            resources = restControllerHelper.generatePagesResource(paginationResult, licenseResources);
         }
+        return new ResponseEntity<>(resources, HttpStatus.OK);
+    }
 
-        CollectionModel<EntityModel<License>> resources = CollectionModel.of(licenseResources);
+    @RequestMapping(value = LICENSE_TYPES_URL, method = RequestMethod.GET)
+    public ResponseEntity<CollectionModel<EntityModel<LicenseType>>> getLicenseTypes() throws TException {
+        List<LicenseType> sw360LicenseTypes = licenseService.getLicenseTypes();
+
+        List<EntityModel<LicenseType>> licenseTypeResources = new ArrayList<>();
+        for (LicenseType sw360LicenseType : sw360LicenseTypes) {
+            LicenseType embeddedLicenseType = restControllerHelper.convertToEmbeddedLicenseType(sw360LicenseType);
+            EntityModel<LicenseType> licenseResource = EntityModel.of(embeddedLicenseType);
+            licenseTypeResources.add(licenseResource);
+        }
+        CollectionModel<EntityModel<LicenseType>> resources = CollectionModel.of(licenseTypeResources);
         return new ResponseEntity<>(resources, HttpStatus.OK);
     }
 
@@ -87,6 +115,19 @@ public class LicenseController implements RepresentationModelProcessor<Repositor
         License sw360License = licenseService.getLicenseById(id);
         HalResource<License> licenseHalResource = createHalLicense(sw360License);
         return new ResponseEntity<>(licenseHalResource, HttpStatus.OK);
+    }
+
+    @RequestMapping(value = LICENSES_URL + "/{id}/obligations", method = RequestMethod.GET)
+    public ResponseEntity<CollectionModel<EntityModel<Obligation>>> getObligationsByLicenseId(
+            @PathVariable("id") String id) throws TException {
+        List<Obligation> obligations = licenseService.getObligationsByLicenseId(id);
+        List<EntityModel<Obligation>> obligationResources = new ArrayList<>();
+        obligations.forEach(o -> {
+            Obligation embeddedObligation = restControllerHelper.convertToEmbeddedObligation(o);
+            obligationResources.add(EntityModel.of(embeddedObligation));
+        });
+        CollectionModel<EntityModel<Obligation>> resources = CollectionModel.of(obligationResources);
+        return new ResponseEntity<>(resources, HttpStatus.OK);
     }
     
     @PreAuthorize("hasAuthority('WRITE')")
@@ -103,6 +144,10 @@ public class LicenseController implements RepresentationModelProcessor<Repositor
     public ResponseEntity<EntityModel<License>> createLicense(
             @RequestBody License license) throws TException {
         User sw360User = restControllerHelper.getSw360UserFromAuthentication();
+        List<License> sw360Licenses = licenseService.getLicenses();
+        if(restControllerHelper.checkDuplicateLicense(sw360Licenses, license.shortname)) {
+            return new ResponseEntity("sw360 component with name" + license.shortname +"already exists.", HttpStatus.CONFLICT);
+        }
         license = licenseService.createLicense(license, sw360User);
         HalResource<License> halResource = createHalLicense(license);
 
@@ -120,6 +165,9 @@ public class LicenseController implements RepresentationModelProcessor<Repositor
             @RequestBody License licenseRequestBody) throws TException {
         User sw360User = restControllerHelper.getSw360UserFromAuthentication();
         License licenseUpdate = licenseService.getLicenseById(id);
+        if (licenseUpdate.isChecked() && !licenseRequestBody.isChecked()) {
+            return new ResponseEntity("Reject license update due to: an already checked license is not allowed to become unchecked again", HttpStatus.METHOD_NOT_ALLOWED);
+        }
         licenseUpdate = restControllerHelper.mapLicenseRequestToLicense(licenseRequestBody, licenseUpdate);
         RequestStatus requestStatus = licenseService.updateLicense(licenseUpdate, sw360User);
         if (requestStatus == RequestStatus.SENT_TO_MODERATOR) {
@@ -133,12 +181,15 @@ public class LicenseController implements RepresentationModelProcessor<Repositor
     @RequestMapping(value = LICENSES_URL+ "/{id}/externalLink", method = RequestMethod.PATCH)
     public ResponseEntity<EntityModel<License>> updateExternalLink(
             @PathVariable("id") String id,
-            @RequestParam(value = "externalLicenseLink") String externalLink) throws TException {
-        if (!isUrl(externalLink)) {
-            throw new RuntimeException("External Link invalid!");
-        }
+            @RequestBody Map<String, String> reqBodyMaps) throws TException {
         User sw360User = restControllerHelper.getSw360UserFromAuthentication();
         License licenseUpdate = licenseService.getLicenseById(id);
+        String externalLink = "";
+        for (Map.Entry<String, String> reqBodyMap: reqBodyMaps.entrySet()) {
+            if(reqBodyMap.getKey().equalsIgnoreCase("externalLicenseLink")) {
+                externalLink = reqBodyMap.getValue();
+            }
+        }
         licenseUpdate.setExternalLicenseLink(externalLink);
         RequestStatus requestStatus = licenseService.getStatusUpdateExternalLinkToLicense(licenseUpdate, sw360User);
         HalResource<License> halResource = null;
@@ -152,16 +203,38 @@ public class LicenseController implements RepresentationModelProcessor<Repositor
         }
     }
 
+    private Set<String> getObligationIdsFromRequestWithValueTrue(Map<String, Boolean> reqBodyMaps) {
+        Map<String, Boolean> obligationIdsRequest = reqBodyMaps.entrySet().stream()
+                .filter(reqBodyMap-> reqBodyMap.getValue().equals(true))
+                .collect(Collectors.toMap(reqBodyMap-> reqBodyMap.getKey(),reqBodyMap -> reqBodyMap.getValue()));
+        return obligationIdsRequest.keySet();
+    }
+
     @PreAuthorize("hasAuthority('WRITE')")
     @RequestMapping(value = LICENSES_URL+ "/{id}/whitelist", method = RequestMethod.PATCH)
     public ResponseEntity<EntityModel<License>> updateWhitelist(
             @PathVariable("id") String licenseId,
-            @RequestParam("obligationIds") Set<String> obligationIds) throws TException {
-        if (CommonUtils.isNullOrEmptyCollection(obligationIds)) {
-            throw new HttpMessageNotReadableException("Obligation Ids invalid!");
-        }
+            @RequestBody Map<String, Boolean> reqBodyMaps) throws TException {
         User sw360User = restControllerHelper.getSw360UserFromAuthentication();
-        RequestStatus requestStatus = licenseService.updateWhitelist(obligationIds, licenseId, sw360User);
+        License license = licenseService.getLicenseById(licenseId);
+        Set<String> obligationIdsByLicense = new HashSet<>();
+        if (!CommonUtils.isNullOrEmptyCollection(license.getObligationDatabaseIds())) {
+            obligationIdsByLicense = license.getObligationDatabaseIds();
+        }
+        Map<String, Boolean> obligationIdsRequest = reqBodyMaps.entrySet().stream()
+                .collect(Collectors.toMap(reqBodyMap-> reqBodyMap.getKey(),reqBodyMap -> reqBodyMap.getValue()));
+        Set<String> obligationIds = obligationIdsRequest.keySet();
+
+        Set<String> commonExtIds = Sets.intersection(obligationIdsByLicense, obligationIds);
+        Set<String> diffIds = Sets.difference(obligationIdsByLicense, obligationIds);
+        if (commonExtIds.size() != obligationIds.size()) {
+            throw new HttpMessageNotReadableException("Obligation Ids not in license!" + license.getShortname());
+        }
+
+        Set<String> obligationIdTrue = licenseService.getIdObligationsContainWhitelist(sw360User, licenseId, diffIds);
+        obligationIdTrue.addAll(getObligationIdsFromRequestWithValueTrue(reqBodyMaps));
+
+        RequestStatus requestStatus = licenseService.updateWhitelist(obligationIdTrue, licenseId, sw360User);
         HalResource<License> halResource;
         if (requestStatus == RequestStatus.SENT_TO_MODERATOR) {
             return new ResponseEntity(RESPONSE_BODY_FOR_MODERATION_REQUEST, HttpStatus.ACCEPTED);
@@ -171,17 +244,6 @@ public class LicenseController implements RepresentationModelProcessor<Repositor
             return new ResponseEntity<>(halResource, HttpStatus.OK);
         } else {
             return new ResponseEntity("Update Whitelist to Obligation Fail!",HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    private static boolean isUrl(String s) {
-        String pattern = "^(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]";
-        try {
-            Pattern patt = Pattern.compile(pattern);
-            Matcher matcher = patt.matcher(s);
-            return matcher.matches();
-        } catch (RuntimeException e) {
-            return false;
         }
     }
 

@@ -201,7 +201,7 @@ public class LicenseDatabaseHandler {
 
     public ByteBuffer getLicenseReportDataStream() throws TException{
         try {
-            List<License> licenses = getLicenseSummary();
+            List<License> licenses = getLicenseSummaryForExport();
             LicenseExporter exporter = getLicenseExporterObject();
             InputStream stream = exporter.makeExcelExport(licenses);
             return ByteBuffer.wrap(IOUtils.toByteArray(stream));
@@ -517,7 +517,10 @@ public class LicenseDatabaseHandler {
                 validateNewLicense(inputLicense);
             } else {
                 validateExistingLicense(inputLicense);
-                oldObligationDatabaseIds = oldLicense.orElse(new License()).getObligationDatabaseIds();
+                License license = oldLicense.orElse(new License());
+                if (!CommonUtils.isNullOrEmptyCollection(license.getObligationDatabaseIds())) {
+                    oldObligationDatabaseIds = license.getObligationDatabaseIds();
+                }
                 oldLicenseForChangelogs = setLicenseForChangelogs(oldLicense.orElse(new License()));
                 oldLicenseForChangelogs.setShortname(inputLicense.getShortname());
             }
@@ -562,7 +565,7 @@ public class LicenseDatabaseHandler {
                         Lists.newArrayList(), null, null);
                 
                 LicenseObligationList oldObligationList = new LicenseObligationList();
-                if (!resultLicense.getObligationDatabaseIds().equals(oldObligationDatabaseIds)) {
+                if (!resultLicense.getObligationDatabaseIds().equals(oldObligationDatabaseIds) && CommonUtils.isNotNullEmptyOrWhitespace(resultLicense.getObligationListId())) {
                     resultObligationList.setId(resultLicense.getObligationListId());
                     LicenseObligationList baseObligationList = obligationListRepository
                             .get(resultLicense.getObligationListId());
@@ -625,7 +628,11 @@ public class LicenseDatabaseHandler {
                 .orElse(Quadratic.NA));
         license.setExternalLicenseLink(inputLicense.getExternalLicenseLink());
         license.setChecked(inputLicense.isChecked());
-        license.setObligationDatabaseIds(inputLicense.getObligationDatabaseIds());
+        if (CommonUtils.isNullOrEmptyCollection(inputLicense.getObligationDatabaseIds())) {
+            license.setObligationDatabaseIds(new HashSet<>());
+        } else {
+            license.setObligationDatabaseIds(inputLicense.getObligationDatabaseIds());
+        }
         license.setNote(inputLicense.getNote());
 
         return license;
@@ -846,6 +853,12 @@ public class LicenseDatabaseHandler {
         return obligations;
     }
 
+    public List<Obligation> getObligationsByLicenseId(String id) throws SW360Exception {
+        License license = getLicenseForOrganisation(id, "?");
+        Set<String> ids = license.getObligationDatabaseIds();
+        return getObligationsByIds(ids);
+    }
+
     public LicenseType getLicenseTypeById(String id) {
         return licenseTypeRepository.get(id);
     }
@@ -1014,6 +1027,9 @@ public class LicenseDatabaseHandler {
 
                 final Optional<License> spdxLicenseAsSW360License = SpdxConnector.getSpdxLicenseAsSW360License(spdxId);
                 if(spdxLicenseAsSW360License.isPresent()){
+                    if(CommonUtils.isNullOrEmptyCollection(spdxLicenseAsSW360License.get().getObligationDatabaseIds())) {
+                        spdxLicenseAsSW360License.get().setObligationDatabaseIds(new HashSet<>());
+                    }
                     newLicenses.add(spdxLicenseAsSW360License.get());
                 }else{
                     log.error("Failed to find SpdxListedLicense with id=" + spdxId);

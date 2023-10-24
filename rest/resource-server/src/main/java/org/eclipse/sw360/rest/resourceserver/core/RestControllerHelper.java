@@ -38,6 +38,7 @@ import org.eclipse.sw360.datahandler.thrift.components.ComponentService;
 import org.eclipse.sw360.datahandler.thrift.components.ComponentType;
 import org.eclipse.sw360.datahandler.thrift.components.COTSDetails;
 import org.eclipse.sw360.datahandler.thrift.licenses.LicenseService;
+import org.eclipse.sw360.datahandler.thrift.licenses.LicenseType;
 import org.eclipse.sw360.datahandler.thrift.packages.Package;
 import org.eclipse.sw360.datahandler.thrift.components.Release;
 import org.eclipse.sw360.datahandler.thrift.components.ReleaseLink;
@@ -471,6 +472,10 @@ public class RestControllerHelper<T> {
         }
     }
 
+    public boolean checkDuplicateLicense(List<License> licenses, String licenseId) {
+        return licenses.stream().anyMatch(licenseCheck -> licenseCheck.getShortname().equalsIgnoreCase(licenseId));
+    }
+
     private HalResource<License> addEmbeddedLicense(String licenseId) {
         License embeddedLicense = convertToEmbeddedLicense(licenseId);
         HalResource<License> halLicense = new HalResource<>(embeddedLicense);
@@ -828,10 +833,19 @@ public class RestControllerHelper<T> {
         License embeddedLicense = new License();
         embeddedLicense.setId(license.getId());
         embeddedLicense.setFullname(license.getFullname());
+        embeddedLicense.setChecked(license.isChecked());
+        embeddedLicense.setLicenseType(license.getLicenseType());
         embeddedLicense.unsetOSIApproved();
         embeddedLicense.unsetFSFLibre();
         embeddedLicense.setType(null);
         return embeddedLicense;
+    }
+
+    public LicenseType convertToEmbeddedLicenseType(LicenseType licenseType) {
+        LicenseType embeddedLicenseType = new LicenseType();
+        embeddedLicenseType.setId(licenseType.getId());
+        embeddedLicenseType.setLicenseType(licenseType.getLicenseType());
+        return embeddedLicenseType;
     }
 
     public License convertToEmbeddedLicense(String licenseId) {
