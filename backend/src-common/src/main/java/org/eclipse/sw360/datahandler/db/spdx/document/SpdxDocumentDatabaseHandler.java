@@ -12,9 +12,18 @@ package org.eclipse.sw360.datahandler.db.spdx.document;
 
 import com.cloudant.client.api.CloudantClient;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.thrift.TException;
+import org.apache.thrift.protocol.TType;
 import org.eclipse.sw360.datahandler.cloudantclient.DatabaseConnectorCloudant;
 import org.eclipse.sw360.datahandler.common.DatabaseSettings;
 import org.eclipse.sw360.datahandler.thrift.*;
+import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.DocumentCreationInformation;
+import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.DocumentCreationInformationService;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformation;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformationService;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageVerificationCode;
 import org.eclipse.sw360.datahandler.thrift.users.User;
 import org.eclipse.sw360.datahandler.thrift.users.RequestedAction;
 import org.eclipse.sw360.datahandler.thrift.spdx.spdxdocument.*;
@@ -36,6 +45,7 @@ import java.util.*;
 import java.util.function.Supplier;
 import com.google.common.collect.Lists;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static org.eclipse.sw360.datahandler.common.SW360Assert.assertNotNull;
 import static org.eclipse.sw360.datahandler.common.CommonUtils.*;
 import static org.eclipse.sw360.datahandler.permissions.PermissionUtils.makePermission;
@@ -121,7 +131,9 @@ public class SpdxDocumentDatabaseHandler {
 
     public AddDocumentRequestSummary addSPDXDocument(SPDXDocument spdx, User user) throws SW360Exception {
         AddDocumentRequestSummary requestSummary= new AddDocumentRequestSummary();
+        log.info("----spdx--1111111-"+ spdx);
         prepareSPDXDocument(spdx);
+        log.info("----spdx--2222222-"+ spdx);
         String releaseId = spdx.getReleaseId();
         Release release = releaseRepository.get(releaseId);
         assertNotNull(release, "Could not find Release to add SPDX Document!");
@@ -131,6 +143,7 @@ public class SpdxDocumentDatabaseHandler {
                             .setId(release.getSpdxId());
         }
         spdx.setCreatedBy(user.getEmail());
+        log.info("----spdx--3333-"+ spdx);
         SPDXDocumentRepository.add(spdx);
         String spdxId = spdx.getId();
         release.setSpdxId(spdxId);
@@ -208,9 +221,7 @@ public class SpdxDocumentDatabaseHandler {
 
     private boolean isChanged(SPDXDocument actual, SPDXDocument update) {
         for (SPDXDocument._Fields field : SPDXDocument._Fields.values()) {
-            if (update.getFieldValue(field) == null && actual.getFieldValue(field) == null) {
-                continue;
-            } else if (update.getFieldValue(field) != null && actual.getFieldValue(field) == null){
+            if (update.getFieldValue(field) != null && actual.getFieldValue(field) == null){
                 return true;
             } else if (update.getFieldValue(field) == null && actual.getFieldValue(field) != null){
                 return true;
@@ -219,6 +230,136 @@ public class SpdxDocumentDatabaseHandler {
             }
         }
         return false;
+    }
+
+    public static void updateSPDX(User user, Release release, boolean addNew) throws TException {
+        String spdxDocumentId = "";
+        String releaseId = release.getId();
+        Set<String> moderators;
+        if (CommonUtils.isNullOrEmptyCollection(release.getModerators())) {
+            moderators = new HashSet<>();
+        } else {
+            moderators = release.getModerators();
+        }
+
+        // Add SPDXDocument
+        SPDXDocument spdx = generateSpdxDocument();
+        spdx.setModerators(moderators);
+        SPDXDocumentService.Iface spdxClient = new ThriftClients().makeSPDXClient();
+        if (spdx != null) {
+            if (isNullOrEmpty(spdx.getReleaseId()) && !isNullOrEmpty(releaseId)) {
+                spdx.setReleaseId(releaseId);
+            }
+            if (isNullOrEmpty(spdx.getId())) {
+                spdx.unsetId();
+                spdx.unsetRevision();
+                spdxDocumentId = spdxClient.addSPDXDocument(spdx, user).getId();
+            } else {
+                spdxClient.updateSPDXDocument(spdx, user);
+                spdxDocumentId = spdx.getId();
+            }
+        }
+
+        // Add DocumentCreationInformation
+        DocumentCreationInformation document = generateDocumentCreationInformation();
+        document.setModerators(moderators);
+        if (document != null) {
+            DocumentCreationInformationService.Iface documentClient = new ThriftClients().makeSPDXDocumentInfoClient();
+            if (isNullOrEmpty(document.getSpdxDocumentId())) {
+                document.setSpdxDocumentId(spdxDocumentId);
+            }
+            if (isNullOrEmpty(document.getId())) {
+                document.unsetId();
+                document.unsetRevision();
+                documentClient.addDocumentCreationInformation(document, user);
+            } else {
+                documentClient.updateDocumentCreationInformation(document, user);
+            }
+        }
+
+        // Add PackageInformation
+        PackageInformation packageInfo = generatePackageInformation();
+        packageInfo.setModerators(moderators);
+        if (packageInfo != null) {
+            PackageInformationService.Iface packageClient = new ThriftClients().makeSPDXPackageInfoClient();
+            if (isNullOrEmpty(packageInfo.getSpdxDocumentId())) {
+                packageInfo.setSpdxDocumentId(spdxDocumentId);
+            }
+            if (isNullOrEmpty(packageInfo.getId())) {
+                packageInfo.unsetId();
+                packageInfo.unsetRevision();
+                packageClient.addPackageInformation(packageInfo, user);
+            } else {
+                packageClient.updatePackageInformation(packageInfo, user);
+            }
+        }
+    }
+
+
+
+    public static SPDXDocument generateSpdxDocument() {
+        SPDXDocument spdxDocument = new SPDXDocument();
+        for (SPDXDocument._Fields field : SPDXDocument._Fields.values()) {
+            switch (SPDXDocument.metaDataMap.get(field).valueMetaData.type) {
+                case TType.SET:
+                    spdxDocument.setFieldValue(field, new HashSet<>());
+                    break;
+                case TType.STRING:
+                    spdxDocument.setFieldValue(field, "");
+                    break;
+                default:
+                    break;
+            }
+        }
+        return spdxDocument;
+    }
+
+    public static DocumentCreationInformation generateDocumentCreationInformation() {
+        DocumentCreationInformation documentCreationInfo = new DocumentCreationInformation();
+        for (DocumentCreationInformation._Fields field : DocumentCreationInformation._Fields.values()) {
+            switch (DocumentCreationInformation.metaDataMap.get(field).valueMetaData.type) {
+                case TType.SET:
+                    documentCreationInfo.setFieldValue(field, new HashSet<>());
+                    break;
+                case TType.STRING:
+                    documentCreationInfo.setFieldValue(field, "");
+                    break;
+                default:
+                    break;
+            }
+        }
+        return documentCreationInfo;
+    }
+
+    public static PackageInformation generatePackageInformation() {
+        PackageInformation packageInfo = new PackageInformation();
+
+        for (PackageInformation._Fields field : PackageInformation._Fields.values()) {
+
+            switch (field) {
+                case PACKAGE_VERIFICATION_CODE: {
+                    PackageVerificationCode packageVerificationCode = new PackageVerificationCode();
+                    packageInfo.setPackageVerificationCode(packageVerificationCode);
+                    break;
+                }
+                default: {
+                    switch (PackageInformation.metaDataMap.get(field).valueMetaData.type) {
+                        case TType.SET:
+                            packageInfo.setFieldValue(field, new HashSet<>());
+                            break;
+                        case TType.STRING:
+                            packageInfo.setFieldValue(field, "");
+                            break;
+                        case TType.BOOL:
+                            packageInfo.setFieldValue(field, true);
+                        default:
+                            break;
+                    }
+                    break;
+                }
+            }
+        }
+        return packageInfo;
     }
 
 }
