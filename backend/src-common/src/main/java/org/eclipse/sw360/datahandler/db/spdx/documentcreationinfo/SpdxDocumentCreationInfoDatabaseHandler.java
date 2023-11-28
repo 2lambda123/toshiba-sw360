@@ -12,6 +12,7 @@ package org.eclipse.sw360.datahandler.db.spdx.documentcreationinfo;
 
 import com.cloudant.client.api.CloudantClient;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.eclipse.sw360.datahandler.cloudantclient.DatabaseConnectorCloudant;
 import org.eclipse.sw360.datahandler.db.spdx.document.SpdxDocumentRepository;
 import org.eclipse.sw360.datahandler.thrift.*;
@@ -129,6 +130,7 @@ public class SpdxDocumentCreationInfoDatabaseHandler {
 
     public RequestStatus updateDocumentCreationInformation(DocumentCreationInformation documentCreationInfo, User user) throws SW360Exception {
         DocumentCreationInformation actual = SPDXDocumentCreationInfoRepository.get(documentCreationInfo.getId());
+        documentCreationInfo.setRevision(actual.getRevision());
         assertNotNull(actual, "Could not find SPDX Document Creation Information to update!");
         prepareSpdxDocumentCreationInfo(documentCreationInfo);
         if (!makePermission(documentCreationInfo, user).isActionAllowed(RequestedAction.WRITE)) {

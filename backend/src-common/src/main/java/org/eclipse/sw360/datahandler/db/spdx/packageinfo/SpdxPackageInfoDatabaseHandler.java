@@ -151,6 +151,9 @@ public class SpdxPackageInfoDatabaseHandler {
     public RequestStatus updatePackageInformation(PackageInformation packageInfo, User user) throws SW360Exception {
         prepareSpdxPackageInfo(packageInfo);
         PackageInformation actual = PackageInfoRepository.get(packageInfo.getId());
+        if (CommonUtils.isNullEmptyOrWhitespace(packageInfo.getRevision())) {
+            packageInfo.setRevision(actual.getRevision());
+        }
         assertNotNull(actual, "Could not find SPDX Package Information to update!");
         if (!makePermission(packageInfo, user).isActionAllowed(RequestedAction.WRITE)) {
             if (isChanged(actual, packageInfo)) {
