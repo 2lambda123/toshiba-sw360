@@ -131,9 +131,9 @@ public class SpdxDocumentDatabaseHandler {
 
     public AddDocumentRequestSummary addSPDXDocument(SPDXDocument spdx, User user) throws SW360Exception {
         AddDocumentRequestSummary requestSummary= new AddDocumentRequestSummary();
-        log.info("----spdx--1111111-"+ spdx);
+        log.info("----spdx--getID-"+ spdx.getId());
         prepareSPDXDocument(spdx);
-        log.info("----spdx--2222222-"+ spdx);
+        log.info("----spdx--getVersion-"+ spdx.getRevision());
         String releaseId = spdx.getReleaseId();
         Release release = releaseRepository.get(releaseId);
         assertNotNull(release, "Could not find Release to add SPDX Document!");
@@ -156,12 +156,6 @@ public class SpdxDocumentDatabaseHandler {
     public RequestStatus updateSPDXDocument(SPDXDocument spdx, User user) throws SW360Exception {
         prepareSPDXDocument(spdx);
         SPDXDocument actual = SPDXDocumentRepository.get(spdx.getId());
-        if (CommonUtils.isNullEmptyOrWhitespace(spdx.getId())) {
-            spdx.setId(actual.getId());
-            spdx.setSpdxDocumentCreationInfoId(actual.getSpdxDocumentCreationInfoId());
-            spdx.setSpdxPackageInfoIds(actual.getSpdxPackageInfoIds());
-            spdx.setRevision(actual.getRevision());
-        }
         assertNotNull(actual, "Could not find SPDX Document to update!");
         if (!makePermission(spdx, user).isActionAllowed(RequestedAction.WRITE)) {
             if (isChanged(actual, spdx)) {
@@ -170,6 +164,7 @@ public class SpdxDocumentDatabaseHandler {
                 return RequestStatus.SUCCESS;
             }
         }
+        log.info("--------spdx------update---"+ spdx);
         SPDXDocumentRepository.update(spdx);
         dbHandlerUtil.addChangeLogs(spdx, actual, user.getEmail(), Operation.UPDATE, null, Lists.newArrayList(), null, null);
         return RequestStatus.SUCCESS;

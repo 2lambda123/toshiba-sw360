@@ -508,13 +508,55 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
         Set<String> moderators = release.getModerators();
         String spdxId = "";
 
+        SPDXDocumentService.Iface spdxClient = new ThriftClients().makeSPDXClient();
+        DocumentCreationInformationService.Iface documentClient = new ThriftClients().makeSPDXDocumentInfoClient();
+        PackageInformationService.Iface packageClient = new ThriftClients().makeSPDXPackageInfoClient();
+
+        if (CommonUtils.isNullEmptyOrWhitespace(release.getSpdxId())) {
+            SPDXDocument spdxDocumentGenerate = restControllerHelper.generateSpdxDocument();
+            DocumentCreationInformation documentCreationInformation = restControllerHelper.generateDocumentCreationInformation();
+            PackageInformation packageInformation = restControllerHelper.generatePackageInformation();
+
+            spdxDocumentGenerate.setModerators(moderators);
+            spdxDocumentGenerate.setReleaseId(releaseId);
+            documentCreationInformation.setModerators(moderators);
+            packageInformation.setModerators(moderators);
+            // Add SPDXDocument
+            if (CommonUtils.isNullEmptyOrWhitespace(spdxDocumentGenerate.getId())) {
+                spdxDocumentGenerate.unsetId();
+                spdxDocumentGenerate.unsetRevision();
+                spdxId = spdxClient.addSPDXDocument(spdxDocumentGenerate, user).getId();
+            }
+            // Add DocumentCreationInformation
+            if (isNullOrEmpty(documentCreationInformation.getSpdxDocumentId())) {
+                documentCreationInformation.setSpdxDocumentId(spdxId);
+            }
+            if (isNullOrEmpty(documentCreationInformation.getId())) {
+                documentCreationInformation.unsetId();
+                documentCreationInformation.unsetRevision();
+                documentClient.addDocumentCreationInformation(documentCreationInformation, user);
+            }
+            // Add PackageInformation
+            if (isNullOrEmpty(packageInformation.getSpdxDocumentId())) {
+                packageInformation.setSpdxDocumentId(spdxId);
+            }
+            if (isNullOrEmpty(packageInformation.getId())) {
+                packageInformation.unsetId();
+                packageInformation.unsetRevision();
+                packageClient.addPackageInformation(packageInformation, user);
+            }
+        }
+        SPDXDocument spdxDocumentActual = spdxId == null ? releaseService.getSPDXDocumentById(release.getSpdxId(), user) : releaseService.getSPDXDocumentById(spdxId, user);
+
         // update SPDXDocumentInformation
-        SPDXDocument spdxDocumentActual = releaseService.getSPDXDocumentById(release.getSpdxId(), user);
         if (null != reqBodyMap.get("spdxDocument")) {
             SPDXDocument spdxDocumentRequest = convertToSPDXDocument(reqBodyMap.get("spdxDocument"));
-            spdxDocumentRequest.setModerators(moderators);
-            SPDXDocumentService.Iface spdxClient = new ThriftClients().makeSPDXClient();
             if (spdxDocumentRequest != null) {
+                spdxDocumentRequest.setModerators(moderators);
+                spdxDocumentRequest.setId(spdxDocumentActual.getId());
+                spdxDocumentRequest.setSpdxDocumentCreationInfoId(spdxDocumentActual.getSpdxDocumentCreationInfoId());
+                spdxDocumentRequest.setSpdxPackageInfoIds(spdxDocumentActual.getSpdxPackageInfoIds());
+                spdxDocumentRequest.setRevision(spdxDocumentActual.getRevision());
                 if (isNullOrEmpty(spdxDocumentRequest.getReleaseId()) && !isNullOrEmpty(releaseId)) {
                     spdxDocumentRequest.setReleaseId(releaseId);
                 }
@@ -527,7 +569,6 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
         if (null != reqBodyMap.get("documentCreationInformation")) {
             DocumentCreationInformation documentCreationInformation = convertToDocumentCreationInformation(reqBodyMap.get("documentCreationInformation"));
             if (documentCreationInformation != null) {
-                DocumentCreationInformationService.Iface documentClient = new ThriftClients().makeSPDXDocumentInfoClient();
                 documentCreationInformation.setModerators(moderators);
                 documentCreationInformation.setId(spdxDocumentActual.getSpdxDocumentCreationInfoId());
                 if (isNullOrEmpty(documentCreationInformation.getSpdxDocumentId())) {
@@ -546,7 +587,6 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
                 if (isNullOrEmpty(packageInformation.getSpdxDocumentId())) {
                     packageInformation.setSpdxDocumentId(spdxId);
                 }
-                PackageInformationService.Iface packageClient = new ThriftClients().makeSPDXPackageInfoClient();
                 packageClient.updatePackageInformation(packageInformation, user);
             }
         }

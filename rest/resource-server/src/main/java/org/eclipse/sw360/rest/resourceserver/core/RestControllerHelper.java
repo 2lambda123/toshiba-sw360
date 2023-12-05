@@ -20,6 +20,7 @@ import org.apache.thrift.TException;
 import org.apache.thrift.TFieldIdEnum;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.thrift.protocol.TType;
 import org.eclipse.sw360.datahandler.common.CommonUtils;
 import org.eclipse.sw360.datahandler.common.SW360Utils;
 import org.eclipse.sw360.datahandler.resourcelists.PaginationOptions;
@@ -54,6 +55,7 @@ import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.Doc
 import org.eclipse.sw360.datahandler.thrift.spdx.spdxdocument.SPDXDocument;
 import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformation;
 import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformationService;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageVerificationCode;
 import org.eclipse.sw360.datahandler.thrift.users.User;
 import org.eclipse.sw360.datahandler.thrift.vendors.Vendor;
 import org.eclipse.sw360.datahandler.thrift.vulnerabilities.CVEReference;
@@ -1329,5 +1331,70 @@ public class RestControllerHelper<T> {
             }
             addEmbeddedFields("sw360:cotsDetail", cotsDetailsHalResource, halResource);
         }
+    }
+
+    public SPDXDocument generateSpdxDocument() {
+        SPDXDocument spdxDocument = new SPDXDocument();
+        for (SPDXDocument._Fields field : SPDXDocument._Fields.values()) {
+            switch (SPDXDocument.metaDataMap.get(field).valueMetaData.type) {
+                case TType.SET:
+                    spdxDocument.setFieldValue(field, new HashSet<>());
+                    break;
+                case TType.STRING:
+                    spdxDocument.setFieldValue(field, "");
+                    break;
+                default:
+                    break;
+            }
+        }
+        return spdxDocument;
+    }
+
+    public DocumentCreationInformation generateDocumentCreationInformation() {
+        DocumentCreationInformation documentCreationInfo = new DocumentCreationInformation();
+        for (DocumentCreationInformation._Fields field : DocumentCreationInformation._Fields.values()) {
+            switch (DocumentCreationInformation.metaDataMap.get(field).valueMetaData.type) {
+                case TType.SET:
+                    documentCreationInfo.setFieldValue(field, new HashSet<>());
+                    break;
+                case TType.STRING:
+                    documentCreationInfo.setFieldValue(field, "");
+                    break;
+                default:
+                    break;
+            }
+        }
+        return documentCreationInfo;
+    }
+
+    public PackageInformation generatePackageInformation() {
+        PackageInformation packageInfo = new PackageInformation();
+
+        for (PackageInformation._Fields field : PackageInformation._Fields.values()) {
+
+            switch (field) {
+                case PACKAGE_VERIFICATION_CODE: {
+                    PackageVerificationCode packageVerificationCode = new PackageVerificationCode();
+                    packageInfo.setPackageVerificationCode(packageVerificationCode);
+                    break;
+                }
+                default: {
+                    switch (PackageInformation.metaDataMap.get(field).valueMetaData.type) {
+                        case TType.SET:
+                            packageInfo.setFieldValue(field, new HashSet<>());
+                            break;
+                        case TType.STRING:
+                            packageInfo.setFieldValue(field, "");
+                            break;
+                        case TType.BOOL:
+                            packageInfo.setFieldValue(field, true);
+                        default:
+                            break;
+                    }
+                    break;
+                }
+            }
+        }
+        return packageInfo;
     }
 }
