@@ -108,6 +108,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class ReleaseController implements RepresentationModelProcessor<RepositoryLinksResource> {
     public static final String RELEASES_URL = "/releases";
+    private static final String SPDX_DOCUMENT = "spdxDocument";
     private static final Logger log = LogManager.getLogger(ReleaseController.class);
     private static final Map<String, ReentrantLock> mapOfLocks = new HashMap<String, ReentrantLock>();
     private static final ImmutableMap<Release._Fields,String> mapOfFieldsTobeEmbedded = ImmutableMap.of(
@@ -505,108 +506,22 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
             throw new HttpMessageNotReadableException("Release id not found");
         }
         Release release = releaseService.getReleaseForUserById(releaseId, user);
-        Set<String> moderators = release.getModerators();
         String spdxId = "";
-
-        SPDXDocumentService.Iface spdxClient = new ThriftClients().makeSPDXClient();
-        DocumentCreationInformationService.Iface documentClient = new ThriftClients().makeSPDXDocumentInfoClient();
-        PackageInformationService.Iface packageClient = new ThriftClients().makeSPDXPackageInfoClient();
-
+        // add SPDXDocument
         if (CommonUtils.isNullEmptyOrWhitespace(release.getSpdxId())) {
-            SPDXDocument spdxDocumentGenerate = restControllerHelper.generateSpdxDocument();
-            DocumentCreationInformation documentCreationInformation = restControllerHelper.generateDocumentCreationInformation();
-            PackageInformation packageInformation = restControllerHelper.generatePackageInformation();
-
-            spdxDocumentGenerate.setModerators(moderators);
-            spdxDocumentGenerate.setReleaseId(releaseId);
-            documentCreationInformation.setModerators(moderators);
-            packageInformation.setModerators(moderators);
-            // Add SPDXDocument
-            if (CommonUtils.isNullEmptyOrWhitespace(spdxDocumentGenerate.getId())) {
-                spdxDocumentGenerate.unsetId();
-                spdxDocumentGenerate.unsetRevision();
-                spdxId = spdxClient.addSPDXDocument(spdxDocumentGenerate, user).getId();
-            }
-            // Add DocumentCreationInformation
-            if (isNullOrEmpty(documentCreationInformation.getSpdxDocumentId())) {
-                documentCreationInformation.setSpdxDocumentId(spdxId);
-            }
-            if (isNullOrEmpty(documentCreationInformation.getId())) {
-                documentCreationInformation.unsetId();
-                documentCreationInformation.unsetRevision();
-                documentClient.addDocumentCreationInformation(documentCreationInformation, user);
-            }
-            // Add PackageInformation
-            if (isNullOrEmpty(packageInformation.getSpdxDocumentId())) {
-                packageInformation.setSpdxDocumentId(spdxId);
-            }
-            if (isNullOrEmpty(packageInformation.getId())) {
-                packageInformation.unsetId();
-                packageInformation.unsetRevision();
-                packageClient.addPackageInformation(packageInformation, user);
-            }
+            spdxId = restControllerHelper.addSPDX(release, user);
         }
-        SPDXDocument spdxDocumentActual = spdxId == null ? releaseService.getSPDXDocumentById(release.getSpdxId(), user) : releaseService.getSPDXDocumentById(spdxId, user);
+        SPDXDocument spdxDocumentActual = CommonUtils.isNullEmptyOrWhitespace(spdxId)
+                ? releaseService.getSPDXDocumentById(release.getSpdxId(), user)
+                : releaseService.getSPDXDocumentById(spdxId, user);
 
-        // update SPDXDocumentInformation
-        if (null != reqBodyMap.get("spdxDocument")) {
-            SPDXDocument spdxDocumentRequest = convertToSPDXDocument(reqBodyMap.get("spdxDocument"));
-            if (spdxDocumentRequest != null) {
-                spdxDocumentRequest.setModerators(moderators);
-                spdxDocumentRequest.setId(spdxDocumentActual.getId());
-                spdxDocumentRequest.setSpdxDocumentCreationInfoId(spdxDocumentActual.getSpdxDocumentCreationInfoId());
-                spdxDocumentRequest.setSpdxPackageInfoIds(spdxDocumentActual.getSpdxPackageInfoIds());
-                spdxDocumentRequest.setRevision(spdxDocumentActual.getRevision());
-                if (isNullOrEmpty(spdxDocumentRequest.getReleaseId()) && !isNullOrEmpty(releaseId)) {
-                    spdxDocumentRequest.setReleaseId(releaseId);
-                }
-                spdxClient.updateSPDXDocument(spdxDocumentRequest, user);
-                spdxId = spdxDocumentRequest.getId();
-            }
+        // update SPDXDocument
+        if (null != reqBodyMap.get(SPDX_DOCUMENT)) {
+            restControllerHelper.updateSPDX(reqBodyMap, spdxId, spdxDocumentActual, release, user);
+        } else {
+            return new ResponseEntity<>("Require SPDXDocument!", HttpStatus.NOT_FOUND);
         }
-
-        // update DocumentCreationInformation
-        if (null != reqBodyMap.get("documentCreationInformation")) {
-            DocumentCreationInformation documentCreationInformation = convertToDocumentCreationInformation(reqBodyMap.get("documentCreationInformation"));
-            if (documentCreationInformation != null) {
-                documentCreationInformation.setModerators(moderators);
-                documentCreationInformation.setId(spdxDocumentActual.getSpdxDocumentCreationInfoId());
-                if (isNullOrEmpty(documentCreationInformation.getSpdxDocumentId())) {
-                    documentCreationInformation.setSpdxDocumentId(spdxId);
-                }
-                documentClient.updateDocumentCreationInformation(documentCreationInformation, user);
-            }
-        }
-
-        // update PackageInformation
-        if (null != reqBodyMap.get("packageInformation")) {
-            PackageInformation packageInformation = convertToPackageInformation(reqBodyMap.get("packageInformation"));
-            if (null != packageInformation) {
-                packageInformation.setModerators(moderators);
-                packageInformation.setId(spdxDocumentActual.getSpdxPackageInfoIds().stream().findFirst().get());
-                if (isNullOrEmpty(packageInformation.getSpdxDocumentId())) {
-                    packageInformation.setSpdxDocumentId(spdxId);
-                }
-                packageClient.updatePackageInformation(packageInformation, user);
-            }
-        }
-
         return ResponseEntity.ok(spdxId);
-    }
-
-    public SPDXDocument convertToSPDXDocument(Object object) {
-        mapper.registerModule(sw360Module);
-        return mapper.convertValue(object, SPDXDocument.class);
-    }
-
-    public DocumentCreationInformation convertToDocumentCreationInformation(Object object) {
-        mapper.registerModule(sw360Module);
-        return mapper.convertValue(object, DocumentCreationInformation.class);
-    }
-
-    public PackageInformation convertToPackageInformation(Object object) {
-        mapper.registerModule(sw360Module);
-        return mapper.convertValue(object, PackageInformation.class);
     }
 
     @GetMapping(value = RELEASES_URL + "/{id}/attachments")

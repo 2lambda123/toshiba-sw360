@@ -29,9 +29,7 @@ import org.eclipse.sw360.datahandler.resourcelists.PaginationResult;
 import org.eclipse.sw360.datahandler.resourcelists.ResourceClassNotFoundException;
 import org.eclipse.sw360.datahandler.resourcelists.ResourceComparatorGenerator;
 import org.eclipse.sw360.datahandler.resourcelists.ResourceListController;
-import org.eclipse.sw360.datahandler.thrift.ProjectReleaseRelationship;
-import org.eclipse.sw360.datahandler.thrift.Quadratic;
-import org.eclipse.sw360.datahandler.thrift.SW360Exception;
+import org.eclipse.sw360.datahandler.thrift.*;
 import org.eclipse.sw360.datahandler.thrift.attachments.Attachment;
 import org.eclipse.sw360.datahandler.thrift.attachments.AttachmentDTO;
 import org.eclipse.sw360.datahandler.thrift.attachments.CheckStatus;
@@ -52,7 +50,9 @@ import org.eclipse.sw360.datahandler.thrift.projects.Project;
 import org.eclipse.sw360.datahandler.thrift.projects.ProjectService;
 import org.eclipse.sw360.datahandler.thrift.projects.ProjectDTO;
 import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.DocumentCreationInformation;
+import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.DocumentCreationInformationService;
 import org.eclipse.sw360.datahandler.thrift.spdx.spdxdocument.SPDXDocument;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxdocument.SPDXDocumentService;
 import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformation;
 import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformationService;
 import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageVerificationCode;
@@ -129,6 +129,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static org.eclipse.sw360.datahandler.common.CommonUtils.isNullEmptyOrWhitespace;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 
@@ -151,6 +152,9 @@ public class RestControllerHelper<T> {
     @NonNull
     private final ResourceListController<T> resourceListController = new ResourceListController<>();
 
+    @NonNull
+    private final com.fasterxml.jackson.databind.Module sw360Module;
+
     private static final Logger LOGGER = LogManager.getLogger(RestControllerHelper.class);
 
     private static final String PAGINATION_KEY_FIRST = "first";
@@ -158,11 +162,19 @@ public class RestControllerHelper<T> {
     private static final String PAGINATION_KEY_NEXT = "next";
     private static final String PAGINATION_KEY_LAST = "last";
     private static final String PAGINATION_PARAM_PAGE = "page";
+    private static final String SPDX_DOCUMENT = "spdxDocument";
+    private static final String DOCUMENT_CREATION_INFORMATION = "documentCreationInformation";
+    private static final String PACKAGE_INFORMATION = "packageInformation";
     private static final double MIN_CVSS = 0;
     private static final double MAX_CVSS = 10;
     public static final String PAGINATION_PARAM_PAGE_ENTRIES = "page_entries";
     public static final ImmutableSet<ProjectReleaseRelationship._Fields> SET_OF_PROJECTRELEASERELATION_FIELDS_TO_IGNORE = ImmutableSet
             .of(ProjectReleaseRelationship._Fields.CREATED_ON, ProjectReleaseRelationship._Fields.CREATED_BY);
+    private static final ObjectMapper mapper = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private static final SPDXDocumentService.Iface spdxClient = new ThriftClients().makeSPDXClient();
+    private static final DocumentCreationInformationService.Iface documentClient = new ThriftClients().makeSPDXDocumentInfoClient();
+    private static final PackageInformationService.Iface packageClient = new ThriftClients().makeSPDXPackageInfoClient();
 
     public User getSw360UserFromAuthentication() {
         try {
@@ -1396,5 +1408,141 @@ public class RestControllerHelper<T> {
             }
         }
         return packageInfo;
+    }
+    public SPDXDocument convertToSPDXDocument(Object object) {
+        mapper.registerModule(sw360Module);
+        return mapper.convertValue(object, SPDXDocument.class);
+    }
+
+    public DocumentCreationInformation convertToDocumentCreationInformation(Object object) {
+        mapper.registerModule(sw360Module);
+        return mapper.convertValue(object, DocumentCreationInformation.class);
+    }
+
+    public PackageInformation convertToPackageInformation(Object object) {
+        mapper.registerModule(sw360Module);
+        return mapper.convertValue(object, PackageInformation.class);
+    }
+
+    public void updateSPDXDocumentFromRequest(SPDXDocument spdxDocumentRequest,
+                                              SPDXDocument spdxDocumentActual,
+                                              Set<String> moderators) {
+        spdxDocumentRequest.setModerators(moderators)
+                .setId(spdxDocumentActual.getId())
+                .setSpdxDocumentCreationInfoId(spdxDocumentActual.getSpdxDocumentCreationInfoId())
+                .setSpdxPackageInfoIds(spdxDocumentActual.getSpdxPackageInfoIds())
+                .setRevision(spdxDocumentActual.getRevision());
+    }
+
+    public void updateDocumentCreationInformationFromRequest(DocumentCreationInformation documentCreationInformation,
+                                                             SPDXDocument spdxDocumentActual,
+                                                             Set<String> moderators) {
+        documentCreationInformation.setModerators(moderators)
+                .setId(spdxDocumentActual.getSpdxDocumentCreationInfoId());
+    }
+
+    public void updatePackageInformationFromRequest(PackageInformation packageInformation,
+                                                    SPDXDocument spdxDocumentActual,
+                                                    Set<String> moderators) {
+        packageInformation.setModerators(moderators)
+                .setId(spdxDocumentActual.getSpdxPackageInfoIds().stream().findFirst().get());
+    }
+
+    public String updateSPDXDocument(SPDXDocument spdxDocumentRequest, String releaseId, User user) throws TException {
+        String spdxId = "";
+        if (null != spdxDocumentRequest) {
+            if (isNullOrEmpty(spdxDocumentRequest.getReleaseId()) && !isNullOrEmpty(releaseId)) {
+                spdxDocumentRequest.setReleaseId(releaseId);
+            }
+            spdxClient.updateSPDXDocument(spdxDocumentRequest, user);
+            spdxId = spdxDocumentRequest.getId();
+        }
+        return spdxId;
+    }
+
+    public void updateDocumentCreationInformation(DocumentCreationInformation documentCreationInformation, String spdxId, User user) throws TException {
+        if (isNullOrEmpty(documentCreationInformation.getSpdxDocumentId())) {
+            documentCreationInformation.setSpdxDocumentId(spdxId);
+        }
+        documentClient.updateDocumentCreationInformation(documentCreationInformation, user);
+    }
+
+    public void updatePackageInformation(PackageInformation packageInformation, String spdxId, User user) throws TException {
+        if (isNullOrEmpty(packageInformation.getSpdxDocumentId())) {
+            packageInformation.setSpdxDocumentId(spdxId);
+        }
+        packageClient.updatePackageInformation(packageInformation, user);
+    }
+
+    public String addSPDXDocument(Release release, User user) throws TException {
+        String spdxId = "";
+        SPDXDocument spdxDocumentGenerate = generateSpdxDocument();
+        spdxDocumentGenerate.setModerators(release.getModerators());
+        spdxDocumentGenerate.setReleaseId(release.getId());
+        if (CommonUtils.isNullEmptyOrWhitespace(spdxDocumentGenerate.getId())) {
+            spdxId = spdxClient.addSPDXDocument(spdxDocumentGenerate, user).getId();
+        }
+        return spdxId;
+    }
+
+    public void addDocumentCreationInformation(String spdxId, Set<String> moderators, User user) throws TException {
+        DocumentCreationInformation documentCreationInformation = generateDocumentCreationInformation();
+        documentCreationInformation.setModerators(moderators);
+        if (isNullOrEmpty(documentCreationInformation.getSpdxDocumentId())) {
+            documentCreationInformation.setSpdxDocumentId(spdxId);
+        }
+        if (isNullOrEmpty(documentCreationInformation.getId())) {
+            documentClient.addDocumentCreationInformation(documentCreationInformation, user);
+        }
+    }
+
+    public void addPackageInformation(String spdxId, Set<String> moderators, User user) throws TException {
+        PackageInformation packageInformation = generatePackageInformation();
+        packageInformation.setModerators(moderators);
+        if (isNullOrEmpty(packageInformation.getSpdxDocumentId())) {
+            packageInformation.setSpdxDocumentId(spdxId);
+        }
+        if (isNullOrEmpty(packageInformation.getId())) {
+            packageClient.addPackageInformation(packageInformation, user);
+        }
+    }
+
+    public String addSPDX(Release release, User user) throws TException {
+        String spdxId = "";
+        spdxId = addSPDXDocument(release, user);
+        if (!CommonUtils.isNotNullEmptyOrWhitespace(spdxId)) {
+            addDocumentCreationInformation(spdxId, release.getModerators(), user);
+            addPackageInformation(spdxId, release.getModerators(), user);
+        } else {
+            throw new HttpMessageNotReadableException("Add SPDXDocument Failed!");
+        }
+        return spdxId;
+    }
+
+    public String updateSPDX(Map<String, Object> reqBodyMap, String spdxId, SPDXDocument spdxDocumentActual, Release release, User user ) throws TException {
+
+        SPDXDocument spdxDocumentRequest = convertToSPDXDocument(reqBodyMap.get(SPDX_DOCUMENT));
+        if (null != spdxDocumentRequest) {
+            updateSPDXDocumentFromRequest(spdxDocumentRequest, spdxDocumentActual, release.getModerators());
+            spdxId = updateSPDXDocument(spdxDocumentRequest, release.getId(), user);
+            if (CommonUtils.isNotNullEmptyOrWhitespace(spdxId)) {
+                throw new HttpMessageNotReadableException("Update SPDXDocument Failed!");
+            }
+        }
+        if (null != reqBodyMap.get(DOCUMENT_CREATION_INFORMATION)) {
+            DocumentCreationInformation documentCreationInformation = convertToDocumentCreationInformation(reqBodyMap.get(DOCUMENT_CREATION_INFORMATION));
+            if (null != documentCreationInformation) {
+                updateDocumentCreationInformationFromRequest(documentCreationInformation, spdxDocumentActual, release.getModerators());
+                updateDocumentCreationInformation(documentCreationInformation, spdxId, user);
+            }
+        }
+        if (null != reqBodyMap.get(PACKAGE_INFORMATION)) {
+            PackageInformation packageInformation =convertToPackageInformation(reqBodyMap.get(PACKAGE_INFORMATION));
+            if( null != packageInformation) {
+                updatePackageInformationFromRequest(packageInformation, spdxDocumentActual, release.getModerators());
+                updatePackageInformation(packageInformation, spdxId, user);
+            }
+        }
+        return spdxId;
     }
 }
