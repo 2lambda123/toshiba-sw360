@@ -1449,14 +1449,15 @@ public class RestControllerHelper<T> {
     }
 
     public String updateSPDXDocument(SPDXDocument spdxDocumentRequest, String releaseId, User user) throws TException {
-        String spdxId = "";
-        if (null != spdxDocumentRequest) {
-            if (isNullOrEmpty(spdxDocumentRequest.getReleaseId()) && !isNullOrEmpty(releaseId)) {
-                spdxDocumentRequest.setReleaseId(releaseId);
-            }
-            spdxClient.updateSPDXDocument(spdxDocumentRequest, user);
-            spdxId = spdxDocumentRequest.getId();
+        String spdxId;
+        if (null == spdxDocumentRequest) {
+            return null;
         }
+        if (isNullOrEmpty(spdxDocumentRequest.getReleaseId()) && !isNullOrEmpty(releaseId)) {
+            spdxDocumentRequest.setReleaseId(releaseId);
+        }
+        spdxClient.updateSPDXDocument(spdxDocumentRequest, user);
+        spdxId = spdxDocumentRequest.getId();
         return spdxId;
     }
 
@@ -1508,26 +1509,25 @@ public class RestControllerHelper<T> {
     }
 
     public String addSPDX(Release release, User user) throws TException {
-        String spdxId = "";
-        spdxId = addSPDXDocument(release, user);
-        if (!CommonUtils.isNotNullEmptyOrWhitespace(spdxId)) {
-            addDocumentCreationInformation(spdxId, release.getModerators(), user);
-            addPackageInformation(spdxId, release.getModerators(), user);
-        } else {
+        String spdxId = addSPDXDocument(release, user);
+        if (CommonUtils.isNotNullEmptyOrWhitespace(spdxId)) {
             throw new HttpMessageNotReadableException("Add SPDXDocument Failed!");
         }
+        addDocumentCreationInformation(spdxId, release.getModerators(), user);
+        addPackageInformation(spdxId, release.getModerators(), user);
         return spdxId;
     }
 
-    public String updateSPDX(Map<String, Object> reqBodyMap, String spdxId, SPDXDocument spdxDocumentActual, Release release, User user ) throws TException {
+    public String updateSPDX(Map<String, Object> reqBodyMap, SPDXDocument spdxDocumentActual, Release release, User user ) throws TException {
 
         SPDXDocument spdxDocumentRequest = convertToSPDXDocument(reqBodyMap.get(SPDX_DOCUMENT));
-        if (null != spdxDocumentRequest) {
-            updateSPDXDocumentFromRequest(spdxDocumentRequest, spdxDocumentActual, release.getModerators());
-            spdxId = updateSPDXDocument(spdxDocumentRequest, release.getId(), user);
-            if (CommonUtils.isNotNullEmptyOrWhitespace(spdxId)) {
-                throw new HttpMessageNotReadableException("Update SPDXDocument Failed!");
-            }
+        if (null == spdxDocumentRequest) {
+            return null;
+        }
+        updateSPDXDocumentFromRequest(spdxDocumentRequest, spdxDocumentActual, release.getModerators());
+        String spdxId = updateSPDXDocument(spdxDocumentRequest, release.getId(), user);
+        if (CommonUtils.isNotNullEmptyOrWhitespace(spdxId)) {
+            throw new HttpMessageNotReadableException("Update SPDXDocument Failed!");
         }
         if (null != reqBodyMap.get(DOCUMENT_CREATION_INFORMATION)) {
             DocumentCreationInformation documentCreationInformation = convertToDocumentCreationInformation(reqBodyMap.get(DOCUMENT_CREATION_INFORMATION));

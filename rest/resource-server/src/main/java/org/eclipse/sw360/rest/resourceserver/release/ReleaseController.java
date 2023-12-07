@@ -501,10 +501,13 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
     @PreAuthorize("hasAuthority('WRITE')")
     @PostMapping(value = RELEASES_URL + "/{id}/spdx")
     public ResponseEntity<?> updateSPDX( @RequestBody Map<String, Object> reqBodyMap, @PathVariable("id") String releaseId) throws TException {
-        User user = restControllerHelper.getSw360UserFromAuthentication();
+        if (!SW360Constants.SPDX_DOCUMENT_ENABLED) {
+            return new ResponseEntity<>("Feature SPDXDocument disable", HttpStatus.BAD_REQUEST);
+        }
         if (CommonUtils.isNullEmptyOrWhitespace(releaseId)) {
             throw new HttpMessageNotReadableException("Release id not found");
         }
+        User user = restControllerHelper.getSw360UserFromAuthentication();
         Release release = releaseService.getReleaseForUserById(releaseId, user);
         String spdxId = "";
         // add SPDXDocument
@@ -517,11 +520,11 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
 
         // update SPDXDocument
         if (null != reqBodyMap.get(SPDX_DOCUMENT)) {
-            restControllerHelper.updateSPDX(reqBodyMap, spdxId, spdxDocumentActual, release, user);
+            spdxId = restControllerHelper.updateSPDX(reqBodyMap, spdxDocumentActual, release, user);
         } else {
             return new ResponseEntity<>("Require SPDXDocument!", HttpStatus.NOT_FOUND);
         }
-        return ResponseEntity.ok(spdxId);
+        return new ResponseEntity<>(spdxId, HttpStatus.OK);
     }
 
     @GetMapping(value = RELEASES_URL + "/{id}/attachments")
