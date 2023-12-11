@@ -178,9 +178,7 @@ public class SpdxDocumentCreationInfoDatabaseHandler {
     private boolean isChanged(DocumentCreationInformation actual, DocumentCreationInformation update) {
 
         for (DocumentCreationInformation._Fields field : DocumentCreationInformation._Fields.values()) {
-            if(update.getFieldValue(field) == null) {
-                continue;
-            } else if (actual.getFieldValue(field) == null) {
+            if (actual.getFieldValue(field) == null) {
                 return true;
             } else if (!actual.getFieldValue(field).equals(update.getFieldValue(field))) {
                 return true;

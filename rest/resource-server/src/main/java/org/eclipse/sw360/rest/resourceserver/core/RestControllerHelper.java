@@ -1448,17 +1448,15 @@ public class RestControllerHelper<T> {
                 .setId(spdxDocumentActual.getSpdxPackageInfoIds().stream().findFirst().get());
     }
 
-    public String updateSPDXDocument(SPDXDocument spdxDocumentRequest, String releaseId, User user) throws TException {
-        String spdxId;
+    public RequestStatus updateSPDXDocument(SPDXDocument spdxDocumentRequest, String releaseId, User user) throws TException {
+
         if (null == spdxDocumentRequest) {
             return null;
         }
         if (isNullOrEmpty(spdxDocumentRequest.getReleaseId()) && !isNullOrEmpty(releaseId)) {
             spdxDocumentRequest.setReleaseId(releaseId);
         }
-        spdxClient.updateSPDXDocument(spdxDocumentRequest, user);
-        spdxId = spdxDocumentRequest.getId();
-        return spdxId;
+        return spdxClient.updateSPDXDocument(spdxDocumentRequest, user);
     }
 
     public void updateDocumentCreationInformation(DocumentCreationInformation documentCreationInformation, String spdxId, User user) throws TException {
@@ -1518,15 +1516,19 @@ public class RestControllerHelper<T> {
         return spdxId;
     }
 
-    public String updateSPDX(Map<String, Object> reqBodyMap, SPDXDocument spdxDocumentActual, Release release, User user ) throws TException {
+    public RequestStatus updateSPDX(Map<String, Object> reqBodyMap, SPDXDocument spdxDocumentActual, Release release, User user ) throws TException {
 
         SPDXDocument spdxDocumentRequest = convertToSPDXDocument(reqBodyMap.get(SPDX_DOCUMENT));
         if (null == spdxDocumentRequest) {
-            return null;
+            return RequestStatus.FAILURE;
         }
         updateSPDXDocumentFromRequest(spdxDocumentRequest, spdxDocumentActual, release.getModerators());
-        String spdxId = updateSPDXDocument(spdxDocumentRequest, release.getId(), user);
-        if (CommonUtils.isNotNullEmptyOrWhitespace(spdxId)) {
+        RequestStatus requestStatus = updateSPDXDocument(spdxDocumentRequest, release.getId(), user);
+        if (requestStatus == RequestStatus.SENT_TO_MODERATOR) {
+            return requestStatus;
+        }
+        String spdxId = spdxDocumentRequest.getId();
+        if (CommonUtils.isNullEmptyOrWhitespace(spdxId)) {
             throw new HttpMessageNotReadableException("Update SPDXDocument Failed!");
         }
         if (null != reqBodyMap.get(DOCUMENT_CREATION_INFORMATION)) {
@@ -1543,6 +1545,6 @@ public class RestControllerHelper<T> {
                 updatePackageInformation(packageInformation, spdxId, user);
             }
         }
-        return spdxId;
+        return requestStatus;
     }
 }

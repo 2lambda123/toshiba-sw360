@@ -131,9 +131,7 @@ public class SpdxDocumentDatabaseHandler {
 
     public AddDocumentRequestSummary addSPDXDocument(SPDXDocument spdx, User user) throws SW360Exception {
         AddDocumentRequestSummary requestSummary= new AddDocumentRequestSummary();
-        log.info("----spdx--getID-"+ spdx.getId());
         prepareSPDXDocument(spdx);
-        log.info("----spdx--getVersion-"+ spdx.getRevision());
         String releaseId = spdx.getReleaseId();
         Release release = releaseRepository.get(releaseId);
         assertNotNull(release, "Could not find Release to add SPDX Document!");
@@ -143,7 +141,6 @@ public class SpdxDocumentDatabaseHandler {
                             .setId(release.getSpdxId());
         }
         spdx.setCreatedBy(user.getEmail());
-        log.info("----spdx--3333-"+ spdx);
         SPDXDocumentRepository.add(spdx);
         String spdxId = spdx.getId();
         release.setSpdxId(spdxId);
@@ -164,7 +161,6 @@ public class SpdxDocumentDatabaseHandler {
                 return RequestStatus.SUCCESS;
             }
         }
-        log.info("--------spdx------update---"+ spdx);
         SPDXDocumentRepository.update(spdx);
         dbHandlerUtil.addChangeLogs(spdx, actual, user.getEmail(), Operation.UPDATE, null, Lists.newArrayList(), null, null);
         return RequestStatus.SUCCESS;
@@ -222,7 +218,9 @@ public class SpdxDocumentDatabaseHandler {
 
     private boolean isChanged(SPDXDocument actual, SPDXDocument update) {
         for (SPDXDocument._Fields field : SPDXDocument._Fields.values()) {
-            if (update.getFieldValue(field) != null && actual.getFieldValue(field) == null){
+            if (null == actual.getFieldValue(field) && null == update.getFieldValue(field)) {
+                return false;
+            } else if (update.getFieldValue(field) != null && actual.getFieldValue(field) == null){
                 return true;
             } else if (update.getFieldValue(field) == null && actual.getFieldValue(field) != null){
                 return true;

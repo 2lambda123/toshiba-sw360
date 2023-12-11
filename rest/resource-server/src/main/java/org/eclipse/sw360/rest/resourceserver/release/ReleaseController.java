@@ -519,10 +519,12 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
                 : releaseService.getSPDXDocumentById(spdxId, user);
 
         // update SPDXDocument
-        if (null != reqBodyMap.get(SPDX_DOCUMENT)) {
-            spdxId = restControllerHelper.updateSPDX(reqBodyMap, spdxDocumentActual, release, user);
-        } else {
+        if (null == reqBodyMap.get(SPDX_DOCUMENT)) {
             return new ResponseEntity<>("Require SPDXDocument!", HttpStatus.NOT_FOUND);
+        }
+        RequestStatus requestStatus = restControllerHelper.updateSPDX(reqBodyMap, spdxDocumentActual, release, user);
+        if (requestStatus == RequestStatus.SENT_TO_MODERATOR) {
+            return new ResponseEntity(RESPONSE_BODY_FOR_MODERATION_REQUEST, HttpStatus.ACCEPTED);
         }
         return new ResponseEntity<>(spdxId, HttpStatus.OK);
     }
