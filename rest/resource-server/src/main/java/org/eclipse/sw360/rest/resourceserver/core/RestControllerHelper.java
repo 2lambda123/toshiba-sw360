@@ -1517,7 +1517,6 @@ public class RestControllerHelper<T> {
     }
 
     public RequestStatus updateSPDX(Map<String, Object> reqBodyMap, SPDXDocument spdxDocumentActual, Release release, User user ) throws TException {
-
         SPDXDocument spdxDocumentRequest = convertToSPDXDocument(reqBodyMap.get(SPDX_DOCUMENT));
         if (null == spdxDocumentRequest) {
             return RequestStatus.FAILURE;

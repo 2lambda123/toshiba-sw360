@@ -233,9 +233,11 @@ public class SpdxPackageInfoDatabaseHandler {
     private boolean isChanged(PackageInformation actual, PackageInformation update) {
 
         for (PackageInformation._Fields field : PackageInformation._Fields.values()) {
-            if (update.getFieldValue(field) == null) {
-                continue;
-            } else if (actual.getFieldValue(field) == null) {
+            if (null == actual.getFieldValue(field) && null == update.getFieldValue(field)) {
+                return false;
+            } else if (update.getFieldValue(field) != null && actual.getFieldValue(field) == null){
+                return true;
+            } else if (update.getFieldValue(field) == null && actual.getFieldValue(field) != null){
                 return true;
             } else if (!actual.getFieldValue(field).equals(update.getFieldValue(field))) {
                 return true;
