@@ -799,6 +799,14 @@ public class JacksonCustomizations {
                 "spdxPackageInfoIdsIterator",
                 "otherLicensingInformationDetectedsIterator",
                 "setOtherLicensingInformationDetecteds",
+                "moderatorsSize",
+                "permissionsSize",
+                "spdxPackageInfoIdsSize",
+                "spdxFileInfoIdsSize",
+                "snippetsSize",
+                "relationshipsSize",
+                "annotationsSize",
+                "otherLicensingInformationDetectedsSize"
         })
         static abstract class SPDXDocumentMixin extends SPDXDocument {
         }
@@ -829,6 +837,10 @@ public class JacksonCustomizations {
                 "setCreated",
                 "setCreatorComment",
                 "setDocumentComment",
+                "moderatorsSize",
+                "permissionsSize",
+                "externalDocumentRefsSize",
+                "creatorSize"
         })
         static abstract class DocumentCreationInformationMixin extends DocumentCreationInformation {
         }
@@ -884,7 +896,13 @@ public class JacksonCustomizations {
                 "setBuiltDate",
                 "setValidUntilDate",
                 "setIndex",
-                "attributionTextIterator"
+                "attributionTextIterator",
+                "moderatorsSize",
+                "permissionsSize",
+                "relationshipsSize",
+                "annotationsSize",
+                "licenseInfoFromFilesSize",
+                "attributionTextSize"
         })
         static abstract class PackageInformationMixin extends PackageInformation {
         }
