@@ -1025,12 +1025,15 @@ define('components/includes/releases/spdxjs', ['jquery',"components/includes/rel
         return spdxDocumentObj.relationships;
     }
 
-
     function initRelationships() {
         let source = getRelationshipsSource();
         if (source.length == 0) {
             enableSection($('.section-relationship'), false);
+
+            $('#selectRelationship').find('option').remove();
         } else {
+            enableSection($('.section-relationship'), true);
+
             fillSelectbox('#selectRelationship', source.length);
 
             fillRelationship(source, 0);
@@ -1051,7 +1054,7 @@ define('components/includes/releases/spdxjs', ['jquery',"components/includes/rel
 
     function storeRelationship(index) {
         let source = getRelationshipsSource()
-        if (index < 0 || index > source - 1) {
+        if (index < 0 || index > source.length - 1) {
             return;
         }
 

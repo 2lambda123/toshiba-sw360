@@ -850,7 +850,6 @@ public class JacksonCustomizations {
                 "revision",
                 "permissions",
                 "index",
-                "relationships",
                 "setType",
                 "setId",
                 "setName",

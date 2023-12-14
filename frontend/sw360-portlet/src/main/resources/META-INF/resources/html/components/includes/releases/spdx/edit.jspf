@@ -436,8 +436,8 @@
         // 11 Relationship - Add
         $('[name=add-relationship]').on('click', function(e) {
             e.preventDefault();
-            let index = 0;
             let source = spdxjs.getRelationshipsSource();
+            let index = 0;
             if (source.length > 0) {
                 index = parseInt(source[source.length - 1].index) + 1;
             }
@@ -455,8 +455,8 @@
         });
         // 11 Relationship - Change
         $('#selectRelationship').on('change', function(e) {
-            var selectedIndex = $('#selectRelationship')[0].selectedIndex;
             let source = spdxjs.getRelationshipsSource();
+            var selectedIndex = $('#selectRelationship')[0].selectedIndex;
             spdxjs.fillRelationship(source, selectedIndex);
         });
         // 12 Annotation - Change source
