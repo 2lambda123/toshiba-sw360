@@ -168,6 +168,8 @@ public class RestControllerHelper<T> {
     private static final double MIN_CVSS = 0;
     private static final double MAX_CVSS = 10;
     public static final String PAGINATION_PARAM_PAGE_ENTRIES = "page_entries";
+    private static final ImmutableMap<String, String> RESPONSE_BODY_FOR_MODERATION_REQUEST = ImmutableMap.<String, String>builder()
+            .put("message", "Moderation request is created").build();
     public static final ImmutableSet<ProjectReleaseRelationship._Fields> SET_OF_PROJECTRELEASERELATION_FIELDS_TO_IGNORE = ImmutableSet
             .of(ProjectReleaseRelationship._Fields.CREATED_ON, ProjectReleaseRelationship._Fields.CREATED_BY);
     private static final ObjectMapper mapper = new ObjectMapper()
@@ -1516,15 +1518,15 @@ public class RestControllerHelper<T> {
         return spdxId;
     }
 
-    public RequestStatus updateSPDX(Map<String, Object> reqBodyMap, SPDXDocument spdxDocumentActual, Release release, User user ) throws TException {
+    public ResponseEntity<?> updateSPDX(Map<String, Object> reqBodyMap, SPDXDocument spdxDocumentActual, Release release, User user ) throws TException {
         SPDXDocument spdxDocumentRequest = convertToSPDXDocument(reqBodyMap.get(SPDX_DOCUMENT));
         if (null == spdxDocumentRequest) {
-            return RequestStatus.FAILURE;
+            return new ResponseEntity("Format SPDXDocument invalid!", HttpStatus.INTERNAL_SERVER_ERROR);
         }
         updateSPDXDocumentFromRequest(spdxDocumentRequest, spdxDocumentActual, release.getModerators());
         RequestStatus requestStatus = updateSPDXDocument(spdxDocumentRequest, release.getId(), user);
         if (requestStatus == RequestStatus.SENT_TO_MODERATOR) {
-            return requestStatus;
+            return new ResponseEntity(RESPONSE_BODY_FOR_MODERATION_REQUEST, HttpStatus.ACCEPTED);
         }
         String spdxId = spdxDocumentRequest.getId();
         if (CommonUtils.isNullEmptyOrWhitespace(spdxId)) {
@@ -1544,6 +1546,6 @@ public class RestControllerHelper<T> {
                 updatePackageInformation(packageInformation, spdxId, user);
             }
         }
-        return requestStatus;
+        return new ResponseEntity<>(spdxId, HttpStatus.OK);
     }
 }

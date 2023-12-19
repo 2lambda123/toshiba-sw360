@@ -109,6 +109,8 @@ import lombok.RequiredArgsConstructor;
 public class ReleaseController implements RepresentationModelProcessor<RepositoryLinksResource> {
     public static final String RELEASES_URL = "/releases";
     private static final String SPDX_DOCUMENT = "spdxDocument";
+    private static final String DOCUMENT_CREATION_INFORMATION = "documentCreationInformation";
+    private static final String PACKAGE_INFORMATION = "packageInformation";
     private static final Logger log = LogManager.getLogger(ReleaseController.class);
     private static final Map<String, ReentrantLock> mapOfLocks = new HashMap<String, ReentrantLock>();
     private static final ImmutableMap<Release._Fields,String> mapOfFieldsTobeEmbedded = ImmutableMap.of(
@@ -522,11 +524,7 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
         if (null == reqBodyMap.get(SPDX_DOCUMENT)) {
             return new ResponseEntity<>("Require SPDXDocument!", HttpStatus.NOT_FOUND);
         }
-        RequestStatus requestStatus = restControllerHelper.updateSPDX(reqBodyMap, spdxDocumentActual, release, user);
-        if (requestStatus == RequestStatus.SENT_TO_MODERATOR) {
-            return new ResponseEntity(RESPONSE_BODY_FOR_MODERATION_REQUEST, HttpStatus.ACCEPTED);
-        }
-        return new ResponseEntity<>(spdxId, HttpStatus.OK);
+        return restControllerHelper.updateSPDX(reqBodyMap, spdxDocumentActual, release, user);
     }
 
     @GetMapping(value = RELEASES_URL + "/{id}/attachments")
