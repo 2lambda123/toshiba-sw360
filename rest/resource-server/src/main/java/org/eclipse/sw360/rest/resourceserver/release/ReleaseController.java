@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Sets;
 import lombok.NonNull;
@@ -501,10 +502,10 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
     }
 
     @PreAuthorize("hasAuthority('WRITE')")
-    @PostMapping(value = RELEASES_URL + "/{id}/spdx")
-    public ResponseEntity<?> updateSPDX( @RequestBody Map<String, Object> reqBodyMap, @PathVariable("id") String releaseId) throws TException {
+    @PatchMapping(value = RELEASES_URL + "/{id}/spdx")
+    public ResponseEntity<?> updateSPDX( @RequestBody Map<String, Object> reqBodyMap, @PathVariable("id") String releaseId) throws TException, JsonProcessingException {
         if (!SW360Constants.SPDX_DOCUMENT_ENABLED) {
-            return new ResponseEntity<>("Feature SPDXDocument disable", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>("Feature SPDXDocument disable", HttpStatus.INTERNAL_SERVER_ERROR);
         }
         if (CommonUtils.isNullEmptyOrWhitespace(releaseId)) {
             throw new HttpMessageNotReadableException("Release id not found");
@@ -519,12 +520,43 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
         SPDXDocument spdxDocumentActual = CommonUtils.isNullEmptyOrWhitespace(spdxId)
                 ? releaseService.getSPDXDocumentById(release.getSpdxId(), user)
                 : releaseService.getSPDXDocumentById(spdxId, user);
-
         // update SPDXDocument
         if (null == reqBodyMap.get(SPDX_DOCUMENT)) {
             return new ResponseEntity<>("Require SPDXDocument!", HttpStatus.NOT_FOUND);
         }
-        return restControllerHelper.updateSPDX(reqBodyMap, spdxDocumentActual, release, user);
+
+        SPDXDocument spdxDocumentRequest = restControllerHelper.convertToSPDXDocument(reqBodyMap.get(SPDX_DOCUMENT));
+
+        if (null == spdxDocumentRequest) {
+            return new ResponseEntity("Format SPDXDocument invalid!", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        restControllerHelper.updateSPDXDocumentFromRequest(spdxDocumentRequest, spdxDocumentActual, release.getModerators());
+        RequestStatus requestStatus = releaseService.updateSPDXDocument(spdxDocumentRequest, release.getId(), user);
+
+        if (requestStatus == RequestStatus.SENT_TO_MODERATOR) {
+            return new ResponseEntity(RESPONSE_BODY_FOR_MODERATION_REQUEST, HttpStatus.ACCEPTED);
+        }
+
+        spdxId = spdxDocumentRequest.getId();
+        if (CommonUtils.isNullEmptyOrWhitespace(spdxId)) {
+            throw new HttpMessageNotReadableException("Update SPDXDocument Failed!");
+        }
+        if (null != reqBodyMap.get(DOCUMENT_CREATION_INFORMATION)) {
+            DocumentCreationInformation documentCreationInformation = restControllerHelper.convertToDocumentCreationInformation(reqBodyMap.get(DOCUMENT_CREATION_INFORMATION));
+            if (null != documentCreationInformation) {
+                restControllerHelper.updateDocumentCreationInformationFromRequest(documentCreationInformation, spdxDocumentActual, release.getModerators());
+                releaseService.updateDocumentCreationInformation(documentCreationInformation, spdxId, user);
+            }
+        }
+        if (null != reqBodyMap.get(PACKAGE_INFORMATION)) {
+            PackageInformation packageInformation = restControllerHelper.convertToPackageInformation(reqBodyMap.get(PACKAGE_INFORMATION));
+            if( null != packageInformation) {
+                restControllerHelper.updatePackageInformationFromRequest(packageInformation, spdxDocumentActual, release.getModerators());
+                releaseService.updatePackageInformation(packageInformation, spdxId, user);
+            }
+        }
+        return new ResponseEntity<>(spdxId, HttpStatus.OK);
     }
 
     @GetMapping(value = RELEASES_URL + "/{id}/attachments")

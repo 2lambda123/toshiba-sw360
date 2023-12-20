@@ -9,6 +9,7 @@
  */
 package org.eclipse.sw360.rest.resourceserver.core;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import lombok.NonNull;
@@ -1411,6 +1412,7 @@ public class RestControllerHelper<T> {
         }
         return packageInfo;
     }
+
     public SPDXDocument convertToSPDXDocument(Object object) {
         mapper.registerModule(sw360Module);
         return mapper.convertValue(object, SPDXDocument.class);
@@ -1446,33 +1448,10 @@ public class RestControllerHelper<T> {
     public void updatePackageInformationFromRequest(PackageInformation packageInformation,
                                                     SPDXDocument spdxDocumentActual,
                                                     Set<String> moderators) {
-        packageInformation.setModerators(moderators)
-                .setId(spdxDocumentActual.getSpdxPackageInfoIds().stream().findFirst().get());
-    }
-
-    public RequestStatus updateSPDXDocument(SPDXDocument spdxDocumentRequest, String releaseId, User user) throws TException {
-
-        if (null == spdxDocumentRequest) {
-            return null;
+        packageInformation.setModerators(moderators);
+        if (!CommonUtils.isNullOrEmptyCollection(spdxDocumentActual.getSpdxPackageInfoIds())) {
+            packageInformation.setId(spdxDocumentActual.getSpdxPackageInfoIds().stream().findFirst().get());
         }
-        if (isNullOrEmpty(spdxDocumentRequest.getReleaseId()) && !isNullOrEmpty(releaseId)) {
-            spdxDocumentRequest.setReleaseId(releaseId);
-        }
-        return spdxClient.updateSPDXDocument(spdxDocumentRequest, user);
-    }
-
-    public void updateDocumentCreationInformation(DocumentCreationInformation documentCreationInformation, String spdxId, User user) throws TException {
-        if (isNullOrEmpty(documentCreationInformation.getSpdxDocumentId())) {
-            documentCreationInformation.setSpdxDocumentId(spdxId);
-        }
-        documentClient.updateDocumentCreationInformation(documentCreationInformation, user);
-    }
-
-    public void updatePackageInformation(PackageInformation packageInformation, String spdxId, User user) throws TException {
-        if (isNullOrEmpty(packageInformation.getSpdxDocumentId())) {
-            packageInformation.setSpdxDocumentId(spdxId);
-        }
-        packageClient.updatePackageInformation(packageInformation, user);
     }
 
     public String addSPDXDocument(Release release, User user) throws TException {
@@ -1516,36 +1495,5 @@ public class RestControllerHelper<T> {
         addDocumentCreationInformation(spdxId, release.getModerators(), user);
         addPackageInformation(spdxId, release.getModerators(), user);
         return spdxId;
-    }
-
-    public ResponseEntity<?> updateSPDX(Map<String, Object> reqBodyMap, SPDXDocument spdxDocumentActual, Release release, User user ) throws TException {
-        SPDXDocument spdxDocumentRequest = convertToSPDXDocument(reqBodyMap.get(SPDX_DOCUMENT));
-        if (null == spdxDocumentRequest) {
-            return new ResponseEntity("Format SPDXDocument invalid!", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-        updateSPDXDocumentFromRequest(spdxDocumentRequest, spdxDocumentActual, release.getModerators());
-        RequestStatus requestStatus = updateSPDXDocument(spdxDocumentRequest, release.getId(), user);
-        if (requestStatus == RequestStatus.SENT_TO_MODERATOR) {
-            return new ResponseEntity(RESPONSE_BODY_FOR_MODERATION_REQUEST, HttpStatus.ACCEPTED);
-        }
-        String spdxId = spdxDocumentRequest.getId();
-        if (CommonUtils.isNullEmptyOrWhitespace(spdxId)) {
-            throw new HttpMessageNotReadableException("Update SPDXDocument Failed!");
-        }
-        if (null != reqBodyMap.get(DOCUMENT_CREATION_INFORMATION)) {
-            DocumentCreationInformation documentCreationInformation = convertToDocumentCreationInformation(reqBodyMap.get(DOCUMENT_CREATION_INFORMATION));
-            if (null != documentCreationInformation) {
-                updateDocumentCreationInformationFromRequest(documentCreationInformation, spdxDocumentActual, release.getModerators());
-                updateDocumentCreationInformation(documentCreationInformation, spdxId, user);
-            }
-        }
-        if (null != reqBodyMap.get(PACKAGE_INFORMATION)) {
-            PackageInformation packageInformation =convertToPackageInformation(reqBodyMap.get(PACKAGE_INFORMATION));
-            if( null != packageInformation) {
-                updatePackageInformationFromRequest(packageInformation, spdxDocumentActual, release.getModerators());
-                updatePackageInformation(packageInformation, spdxId, user);
-            }
-        }
-        return new ResponseEntity<>(spdxId, HttpStatus.OK);
     }
 }

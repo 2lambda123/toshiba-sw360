@@ -60,6 +60,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static org.eclipse.sw360.datahandler.common.CommonUtils.isNullEmptyOrWhitespace;
 import static org.eclipse.sw360.datahandler.common.CommonUtils.nullToEmptyString;
 import static org.eclipse.sw360.datahandler.common.WrappedException.wrapTException;
@@ -240,6 +241,33 @@ public class Sw360ReleaseService implements AwareOfRestServices<Release> {
                     "sw360 release with name '" + SW360Utils.printName(release) + " cannot be updated.");
         }
         return requestStatus;
+    }
+
+    public RequestStatus updateSPDXDocument(SPDXDocument spdxDocumentRequest, String releaseId, User user) throws TException {
+        SPDXDocumentService.Iface spdxClient = new ThriftClients().makeSPDXClient();
+        if (null == spdxDocumentRequest) {
+            return null;
+        }
+        if (isNullOrEmpty(spdxDocumentRequest.getReleaseId()) && !isNullOrEmpty(releaseId)) {
+            spdxDocumentRequest.setReleaseId(releaseId);
+        }
+        return spdxClient.updateSPDXDocument(spdxDocumentRequest, user);
+    }
+
+    public RequestStatus updateDocumentCreationInformation(DocumentCreationInformation documentCreationInformation, String spdxId, User user) throws TException {
+        DocumentCreationInformationService.Iface documentClient = new ThriftClients().makeSPDXDocumentInfoClient();
+        if (isNullOrEmpty(documentCreationInformation.getSpdxDocumentId())) {
+            documentCreationInformation.setSpdxDocumentId(spdxId);
+        }
+        return documentClient.updateDocumentCreationInformation(documentCreationInformation, user);
+    }
+
+    public RequestStatus updatePackageInformation(PackageInformation packageInformation, String spdxId, User user) throws TException {
+        PackageInformationService.Iface packageClient = new ThriftClients().makeSPDXPackageInfoClient();
+        if (isNullOrEmpty(packageInformation.getSpdxDocumentId())) {
+            packageInformation.setSpdxDocumentId(spdxId);
+        }
+        return packageClient.updatePackageInformation(packageInformation, user);
     }
 
     public RequestStatus deleteRelease(String releaseId, User sw360User) throws TException {

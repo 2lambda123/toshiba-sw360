@@ -40,6 +40,7 @@ import java.util.UUID;
 
 import com.google.common.collect.Sets;
 import org.apache.thrift.TException;
+import org.eclipse.sw360.datahandler.common.SW360Constants;
 import org.eclipse.sw360.datahandler.thrift.*;
 import org.eclipse.sw360.datahandler.thrift.attachments.*;
 import org.eclipse.sw360.datahandler.thrift.components.COTSDetails;
@@ -62,6 +63,20 @@ import org.eclipse.sw360.datahandler.thrift.packages.Package;
 import org.eclipse.sw360.datahandler.thrift.packages.PackageManager;
 import org.eclipse.sw360.datahandler.thrift.projects.Project;
 import org.eclipse.sw360.datahandler.thrift.projects.ProjectType;
+import org.eclipse.sw360.datahandler.thrift.spdx.annotations.Annotations;
+import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.CheckSum;
+import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.Creator;
+import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.DocumentCreationInformation;
+import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.ExternalDocumentReferences;
+import org.eclipse.sw360.datahandler.thrift.spdx.otherlicensinginformationdetected.OtherLicensingInformationDetected;
+import org.eclipse.sw360.datahandler.thrift.spdx.relationshipsbetweenspdxelements.RelationshipsBetweenSPDXElements;
+import org.eclipse.sw360.datahandler.thrift.spdx.snippetinformation.SnippetInformation;
+import org.eclipse.sw360.datahandler.thrift.spdx.snippetinformation.SnippetRange;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxdocument.SPDXDocument;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.ExternalReference;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformation;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageVerificationCode;
+import org.eclipse.sw360.datahandler.thrift.users.RequestedAction;
 import org.eclipse.sw360.datahandler.thrift.users.User;
 import org.eclipse.sw360.datahandler.thrift.vendors.Vendor;
 import org.eclipse.sw360.datahandler.thrift.vulnerabilities.ReleaseVulnerabilityRelation;
@@ -133,7 +148,7 @@ public class ReleaseSpecTest extends TestRestDocsSpecBase {
     @MockBean
     private Sw360LicenseInfoService licenseInfoMockService;
 
-    private Release release, release3, releaseTest;
+    private Release release, release3, releaseTest, releaseSpdx;
     private Attachment attachment;
     Component component;
     private Project project;
@@ -551,6 +566,74 @@ public class ReleaseSpecTest extends TestRestDocsSpecBase {
         releaseTest.setId("12121212");
         releaseTest.setName("Test Load SPDX");
         releaseTest.setVersion("1.0");
+
+        SPDXDocument spdxDocument = new SPDXDocument();
+        spdxDocument.setSpdxFileInfoIds(new HashSet<>());
+        spdxDocument.setId("1111");
+        // snippetInformations
+        SnippetInformation snippetInformation = new SnippetInformation();
+        snippetInformation.setSPDXID("SPDXRef-Snippet-11").setSnippetRanges(new HashSet<>(
+                        Arrays.asList(new SnippetRange()
+                                .setRangeType("BYTE")
+                                .setEndPointer("11")
+                                .setRangeType("11")
+                                .setReference("11")
+                                .setIndex(0))))
+                .setSnippetFromFile("SPDXRef-11")
+                .setLicenseConcluded("11")
+                .setLicenseInfoInSnippets(new HashSet<>(Arrays.asList("11")))
+                .setLicenseComments("11")
+                .setCopyrightText("11")
+                .setComment("11")
+                .setName("11")
+                .setSnippetAttributionText("11")
+                .setIndex(0);
+        Set<SnippetInformation> snippetInformations = new HashSet<>(Arrays.asList(snippetInformation));
+
+        spdxDocument.setSnippets(snippetInformations);
+        //relationships
+        RelationshipsBetweenSPDXElements relationshipsBetweenSPDXElement = new RelationshipsBetweenSPDXElements();
+        relationshipsBetweenSPDXElement.setIndex(0)
+                .setRelationshipComment("11")
+                .setRelationshipType("11")
+                .setSpdxElementId("11")
+                .setRelatedSpdxElement("11");
+
+        Set<RelationshipsBetweenSPDXElements> relationshipsBetweenSPDXElements = new HashSet<>(Arrays.asList(relationshipsBetweenSPDXElement));
+
+        spdxDocument.setRelationships(relationshipsBetweenSPDXElements);
+
+        // Annotations
+        Annotations annotation = new Annotations().setAnnotator("Organization: 11")
+                .setAnnotationDate("2023-11-14T07:31:11Z")
+                .setAnnotationType("11")
+                .setAnnotationComment("11")
+                .setSpdxIdRef("11")
+                .setIndex(0);
+        Set<Annotations> annotations = new HashSet<>(Arrays.asList(annotation));
+        spdxDocument.setAnnotations(annotations);
+
+        // OtherLicensingInformationDetected
+        OtherLicensingInformationDetected otherLicensingInformationDetected = new OtherLicensingInformationDetected()
+                .setLicenseId("LicenseRef-11")
+                .setExtractedText("11")
+                .setLicenseName("11")
+                .setLicenseCrossRefs(new HashSet<>(Arrays.asList("11")))
+                .setLicenseComment("11")
+                .setIndex(0);
+
+        Set<OtherLicensingInformationDetected> otherLicensingInformationDetecteds = new HashSet<>(Arrays.asList(otherLicensingInformationDetected));
+        spdxDocument.setOtherLicensingInformationDetecteds(otherLicensingInformationDetecteds);
+        given(releaseServiceMock.getSPDXDocumentById(any(), any())).willReturn(spdxDocument);
+        releaseSpdx = new Release();
+        releaseSpdx.setSpdxId(spdxDocument.getId());
+        releaseSpdx.setId("12121212");
+        releaseSpdx.setName("Test Load SPDX");
+        releaseSpdx.setVersion("1.0");
+        given(this.releaseServiceMock.getReleaseForUserById(eq(releaseSpdx.getId()), any())).willReturn(releaseSpdx);
+        given(this.releaseServiceMock.updateSPDXDocument(any(), any(), any())).willReturn(RequestStatus.SUCCESS);
+        given(this.releaseServiceMock.updateDocumentCreationInformation(any(), any(), any())).willReturn(RequestStatus.SUCCESS);
+        given(this.releaseServiceMock.updatePackageInformation(any(), any(), any())).willReturn(RequestStatus.SUCCESS);
     }
     @Test
     public void should_document_get_releases() throws Exception {
@@ -801,6 +884,220 @@ public class ReleaseSpecTest extends TestRestDocsSpecBase {
                 .accept(MediaTypes.HAL_JSON))
                 .andExpect(status().isOk())
                 .andDo(documentReleaseProperties());
+    }
+
+    private RestDocumentationResultHandler documentReleaseDetailProperties() {
+        return this.documentationHandler.document(
+                links(
+                        linkWithRel("self").description("The <<resources-releases,Releases resource>>"),
+                        linkWithRel("sw360:component").description("The link to the corresponding component"),
+                        linkWithRel("curies").description("The curies for documentation")
+                ),
+                responseFields(
+                        fieldWithPath("name").description("The name of the release, optional"),
+                        fieldWithPath("version").description("The version of the release"),
+                        fieldWithPath("createdBy").description("Email of the release creator"),
+                        fieldWithPath("cpeid").description("CpeId of the release"),
+                        fieldWithPath("clearingState").description("The clearing of the release, possible values are " + Arrays.asList(ClearingState.values())),
+                        fieldWithPath("releaseDate").description("The date of this release"),
+                        fieldWithPath("createdOn").description("The creation date of the internal sw360 release"),
+                        fieldWithPath("componentType").description("The componentType of the release, possible values are " + Arrays.asList(ComponentType.values())),
+                        fieldWithPath("mainlineState").description("the mainline state of the release, possible values are: " + Arrays.asList(MainlineState.values())),
+                        subsectionWithPath("eccInformation").description("The eccInformation of this release"),
+                        fieldWithPath("sourceCodeDownloadurl").description("the source code download url of the release"),
+                        fieldWithPath("binaryDownloadurl").description("the binary download url of the release"),
+                        fieldWithPath("otherLicenseIds").description("An array of all other licenses associated with the release"),
+                        subsectionWithPath("externalIds").description("When releases are imported from other tools, the external ids can be stored here. Store as 'Single String' when single value, or 'Array of String' when multi-values"),
+                        subsectionWithPath("additionalData").description("A place to store additional data used by external tools"),
+                        fieldWithPath("languages").description("The language of the component"),
+                        subsectionWithPath("_embedded.sw360:licenses").description("An array of all main licenses with their fullName and link to their <<resources-license-get,License resource>>"),
+                        subsectionWithPath("_embedded.sw360:packages").description("An array of all the linked packages and link to their <<resources-package-get,Package resource>>"),
+                        fieldWithPath("operatingSystems").description("The OS on which the release operates"),
+                        fieldWithPath("softwarePlatforms").description("The software platforms of the component"),
+                        subsectionWithPath("clearingInformation").description("Clearing information of release"),
+                        subsectionWithPath("cotsDetails").description("Cots Details of release"),
+                        subsectionWithPath("_embedded.sw360:moderators").description("An array of all release moderators with email and link to their <<resources-user-get,User resource>>"),
+                        subsectionWithPath("_embedded.sw360:subscribers").description("An array of all release subscribers with email and link to their <<resources-user-get,User resource>>"),
+                        subsectionWithPath("_embedded.sw360:contributors").description("An array of all release contributors with email and link to their <<resources-user-get,User resource>>"),
+                        subsectionWithPath("_embedded.sw360:modifiedBy").description("A release modifiedBy with email and link to their <<resources-user-get,User resource>>"),
+                        subsectionWithPath("_embedded.sw360:createdBy").description("A release createdBy with email and link to their <<resources-user-get,User resource>>"),
+                        subsectionWithPath("_embedded.sw360:attachments").description("An array of all release attachments and link to their <<resources-attachment-get,Attachment resource>>"),
+                        subsectionWithPath("_embedded.sw360:cotsDetail").description("Cots detail information of release has component type = COTS "),
+                        subsectionWithPath("_links").description("<<resources-index-links,Links>> to other resources")
+                ));
+    }
+
+    private RestDocumentationResultHandler documentReleaseSPDXDocumentProperties() {
+        return this.documentationHandler.document(
+                links(
+                        linkWithRel("self").description("The <<resources-releases,Releases resource>>"),
+                        linkWithRel("sw360:component").description("The link to the corresponding component"),
+                        linkWithRel("curies").description("The curies for documentation")
+                ),
+                responseFields(
+                        fieldWithPath("name").description("The name of the release, optional"),
+                        fieldWithPath("version").description("The version of the release"),
+                        fieldWithPath("createdBy").description("Email of the release creator"),
+                        fieldWithPath("cpeid").description("CpeId of the release"),
+                        fieldWithPath("clearingState").description("The clearing of the release, possible values are " + Arrays.asList(ClearingState.values())),
+                        fieldWithPath("releaseDate").description("The date of this release"),
+                        fieldWithPath("createdOn").description("The creation date of the internal sw360 release"),
+                        fieldWithPath("componentType").description("The componentType of the release, possible values are " + Arrays.asList(ComponentType.values())),
+                        fieldWithPath("mainlineState").description("the mainline state of the release, possible values are: " + Arrays.asList(MainlineState.values())),
+                        subsectionWithPath("eccInformation").description("The eccInformation of this release"),
+                        fieldWithPath("sourceCodeDownloadurl").description("the source code download url of the release"),
+                        fieldWithPath("binaryDownloadurl").description("the binary download url of the release"),
+                        fieldWithPath("otherLicenseIds").description("An array of all other licenses associated with the release"),
+                        subsectionWithPath("externalIds").description("When releases are imported from other tools, the external ids can be stored here. Store as 'Single String' when single value, or 'Array of String' when multi-values"),
+                        subsectionWithPath("additionalData").description("A place to store additional data used by external tools"),
+                        fieldWithPath("languages").description("The language of the component"),
+                        subsectionWithPath("_embedded.sw360:licenses").description("An array of all main licenses with their fullName and link to their <<resources-license-get,License resource>>"),
+                        subsectionWithPath("_embedded.sw360:packages").description("An array of all the linked packages and link to their <<resources-package-get,Package resource>>"),
+                        fieldWithPath("operatingSystems").description("The OS on which the release operates"),
+                        fieldWithPath("softwarePlatforms").description("The software platforms of the component"),
+                        subsectionWithPath("clearingInformation").description("Clearing information of release"),
+                        subsectionWithPath("cotsDetails").description("Cots Details of release"),
+                        subsectionWithPath("_embedded.sw360:moderators").description("An array of all release moderators with email and link to their <<resources-user-get,User resource>>"),
+                        subsectionWithPath("_embedded.sw360:subscribers").description("An array of all release subscribers with email and link to their <<resources-user-get,User resource>>"),
+                        subsectionWithPath("_embedded.sw360:contributors").description("An array of all release contributors with email and link to their <<resources-user-get,User resource>>"),
+                        subsectionWithPath("_embedded.sw360:modifiedBy").description("A release modifiedBy with email and link to their <<resources-user-get,User resource>>"),
+                        subsectionWithPath("_embedded.sw360:createdBy").description("A release createdBy with email and link to their <<resources-user-get,User resource>>"),
+                        subsectionWithPath("_embedded.sw360:attachments").description("An array of all release attachments and link to their <<resources-attachment-get,Attachment resource>>"),
+                        subsectionWithPath("_embedded.sw360:cotsDetail").description("Cots detail information of release has component type = COTS "),
+                        subsectionWithPath("_embedded.sw360:spdxDocument").description("SPDXDocument information of release"),
+                        subsectionWithPath("_embedded.sw360:documentCreationInformation").description("DocumentCreationInformation  of release"),
+                        subsectionWithPath("_embedded.sw360:packageInformation").description("PackageInformation of release"),
+                        subsectionWithPath("_links").description("<<resources-index-links,Links>> to other resources")
+                ));
+    }
+
+    public SPDXDocument mockDataSPDXDocument() {
+        //SPDXDocument
+        SPDXDocument spdxDocument = new SPDXDocument();
+        spdxDocument.setSpdxFileInfoIds(new HashSet<>());
+        // snippetInformations
+        SnippetInformation snippetInformation = new SnippetInformation();
+        snippetInformation.setSPDXID("SPDXRef-Snippet-11").setSnippetRanges(new HashSet<>(
+                        Arrays.asList(new SnippetRange()
+                                .setRangeType("BYTE")
+                                .setStartPointer("11")
+                                .setEndPointer("11")
+                                .setRangeType("11")
+                                .setReference("11")
+                                .setIndex(0))))
+                .setSnippetFromFile("SPDXRef-11")
+                .setLicenseConcluded("11")
+                .setLicenseInfoInSnippets(new HashSet<>(Arrays.asList("11")))
+                .setLicenseComments("11")
+                .setCopyrightText("11")
+                .setComment("11")
+                .setName("11")
+                .setSnippetAttributionText("11")
+                .setIndex(0);
+        Set<SnippetInformation> snippetInformations = new HashSet<>(Arrays.asList(snippetInformation));
+
+        spdxDocument.setSnippets(snippetInformations);
+        //relationships
+        RelationshipsBetweenSPDXElements relationshipsBetweenSPDXElement = new RelationshipsBetweenSPDXElements();
+        relationshipsBetweenSPDXElement.setIndex(0)
+                .setRelationshipComment("11")
+                .setRelationshipType("11")
+                .setSpdxElementId("11")
+                .setRelatedSpdxElement("11");
+
+        Set<RelationshipsBetweenSPDXElements> relationshipsBetweenSPDXElements = new HashSet<>(Arrays.asList(relationshipsBetweenSPDXElement));
+
+        spdxDocument.setRelationships(relationshipsBetweenSPDXElements);
+
+        // Annotations
+        Annotations annotation = new Annotations().setAnnotator("Organization: 11")
+                .setAnnotationDate("2023-11-14T07:31:11Z")
+                .setAnnotationType("11")
+                .setAnnotationComment("11")
+                .setSpdxIdRef("11")
+                .setIndex(0);
+        Set<Annotations> annotations = new HashSet<>(Arrays.asList(annotation));
+        spdxDocument.setAnnotations(annotations);
+
+        // OtherLicensingInformationDetected
+        OtherLicensingInformationDetected otherLicensingInformationDetected = new OtherLicensingInformationDetected()
+                .setLicenseId("LicenseRef-11")
+                .setExtractedText("11")
+                .setLicenseName("11")
+                .setLicenseCrossRefs(new HashSet<>(Arrays.asList("11")))
+                .setLicenseComment("11")
+                .setIndex(0);
+
+        Set<OtherLicensingInformationDetected> otherLicensingInformationDetecteds = new HashSet<>(Arrays.asList(otherLicensingInformationDetected));
+
+        spdxDocument.setOtherLicensingInformationDetecteds(otherLicensingInformationDetecteds);
+
+        DocumentState documentState = new DocumentState()
+                .setIsOriginalDocument(true)
+                .setModerationState(null);
+
+        spdxDocument.setDocumentState(documentState).setModerators(new HashSet<>());
+        return spdxDocument;
+    }
+
+    public DocumentCreationInformation mockDataDocumentCreationInformation() {
+        DocumentCreationInformation documentCreationInformation = new DocumentCreationInformation();
+
+        documentCreationInformation.setSpdxVersion("SPDX-3333").setDataLicense("11").setSPDXID("SPDXRef-1111")
+                .setName("11").setDocumentNamespace("11").setExternalDocumentRefs(new HashSet<>(Arrays.asList(
+                        new ExternalDocumentReferences().setExternalDocumentId("11").setSpdxDocument("11").setIndex(0)
+                                .setChecksum(new CheckSum().setChecksumValue("11").setAlgorithm("11").setIndex(0)))))
+                .setLicenseListVersion("11").setCreator(new HashSet<>(Arrays.asList(new Creator().setType("Person")
+                        .setValue("Test Admin (admin@sw360.org)").setIndex(0))))
+                .setCreated("2023-11-27T07:25:40Z").setCreatorComment("11").setDocumentComment("11").setCreatedBy("admin@sw360.org")
+                .setModerators(new HashSet<>());
+        return documentCreationInformation;
+    }
+
+    public PackageInformation mockDataPackageInformation() {
+        PackageInformation packageInformation = new PackageInformation();
+        packageInformation.setName("11").setSPDXID("SPDXRef-Package-11").setVersionInfo("11")
+                .setPackageFileName("11").setSupplier("Organization: 11").setOriginator("Organization: 11")
+                .setDownloadLocation("11").setFilesAnalyzed(true)
+                .setPackageVerificationCode(new PackageVerificationCode().setExcludedFiles(new HashSet<>(Arrays.asList("11"))).setValue("11"))
+                .setRelationships(new HashSet<>(Arrays.asList(new RelationshipsBetweenSPDXElements()
+                        .setSpdxElementId("11").setRelationshipType("11").setRelatedSpdxElement("11")
+                        .setRelationshipComment("11").setIndex(0))))
+                .setChecksums(new HashSet<>(Arrays.asList(new CheckSum().setAlgorithm("11").setChecksumValue("1111"))))
+                .setHomepage("11").setSourceInfo("11").setLicenseConcluded("11").setLicenseInfoFromFiles(new HashSet<>(Arrays.asList("11")))
+                .setLicenseDeclared("11").setLicenseComments("11").setCopyrightText("11").setSummary("11").setDescription("11")
+                .setPackageComment("11").setExternalRefs(new HashSet<>(Arrays.asList(new ExternalReference().setReferenceCategory("SECURITY")
+                        .setReferenceLocator("11").setReferenceType("cpe22Type").setComment("11").setIndex(0))))
+                .setAttributionText(new HashSet<>(Arrays.asList("11"))).setAnnotations(new HashSet<>()).setPrimaryPackagePurpose("11")
+                .setReleaseDate("2023-11-10T07:30:39Z").setBuiltDate("2023-11-09T07:29:43Z").setValidUntilDate("2023-11-22T07:30:47Z")
+                .setModerators(new HashSet<>()).setIndex(0);
+        return packageInformation;
+    }
+
+    @Test
+    public void should_document_update_spdx() throws Exception {
+        //SPDXDocument
+        SPDXDocument spdxDocument = mockDataSPDXDocument();
+
+        // DocumentCreationInformation
+        DocumentCreationInformation documentCreationInformation = mockDataDocumentCreationInformation();
+
+        // PackageInformation
+        PackageInformation packageInformation = mockDataPackageInformation();
+
+        Map<String, Object> updateSPDX = new HashMap<>();
+        updateSPDX.put("spdxDocument", spdxDocument);
+        updateSPDX.put("documentCreationInformation", documentCreationInformation);
+        updateSPDX.put("packageInformation", packageInformation);
+
+        String accessToken = TestHelper.getAccessToken(mockMvc, testUserId, testUserPassword);
+
+        mockMvc.perform(patch("/api/releases/" + releaseSpdx.getId() + "/spdx")
+                        .contentType(MediaTypes.HAL_JSON)
+                        .content(this.objectMapper.writeValueAsString(updateSPDX))
+                        .header("Authorization", "Bearer" + accessToken)
+                        .accept(MediaTypes.HAL_JSON))
+                .andExpect(status().isOk());
     }
 
     @Test
