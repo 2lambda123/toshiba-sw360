@@ -886,91 +886,6 @@ public class ReleaseSpecTest extends TestRestDocsSpecBase {
                 .andDo(documentReleaseProperties());
     }
 
-    private RestDocumentationResultHandler documentReleaseDetailProperties() {
-        return this.documentationHandler.document(
-                links(
-                        linkWithRel("self").description("The <<resources-releases,Releases resource>>"),
-                        linkWithRel("sw360:component").description("The link to the corresponding component"),
-                        linkWithRel("curies").description("The curies for documentation")
-                ),
-                responseFields(
-                        fieldWithPath("name").description("The name of the release, optional"),
-                        fieldWithPath("version").description("The version of the release"),
-                        fieldWithPath("createdBy").description("Email of the release creator"),
-                        fieldWithPath("cpeid").description("CpeId of the release"),
-                        fieldWithPath("clearingState").description("The clearing of the release, possible values are " + Arrays.asList(ClearingState.values())),
-                        fieldWithPath("releaseDate").description("The date of this release"),
-                        fieldWithPath("createdOn").description("The creation date of the internal sw360 release"),
-                        fieldWithPath("componentType").description("The componentType of the release, possible values are " + Arrays.asList(ComponentType.values())),
-                        fieldWithPath("mainlineState").description("the mainline state of the release, possible values are: " + Arrays.asList(MainlineState.values())),
-                        subsectionWithPath("eccInformation").description("The eccInformation of this release"),
-                        fieldWithPath("sourceCodeDownloadurl").description("the source code download url of the release"),
-                        fieldWithPath("binaryDownloadurl").description("the binary download url of the release"),
-                        fieldWithPath("otherLicenseIds").description("An array of all other licenses associated with the release"),
-                        subsectionWithPath("externalIds").description("When releases are imported from other tools, the external ids can be stored here. Store as 'Single String' when single value, or 'Array of String' when multi-values"),
-                        subsectionWithPath("additionalData").description("A place to store additional data used by external tools"),
-                        fieldWithPath("languages").description("The language of the component"),
-                        subsectionWithPath("_embedded.sw360:licenses").description("An array of all main licenses with their fullName and link to their <<resources-license-get,License resource>>"),
-                        subsectionWithPath("_embedded.sw360:packages").description("An array of all the linked packages and link to their <<resources-package-get,Package resource>>"),
-                        fieldWithPath("operatingSystems").description("The OS on which the release operates"),
-                        fieldWithPath("softwarePlatforms").description("The software platforms of the component"),
-                        subsectionWithPath("clearingInformation").description("Clearing information of release"),
-                        subsectionWithPath("cotsDetails").description("Cots Details of release"),
-                        subsectionWithPath("_embedded.sw360:moderators").description("An array of all release moderators with email and link to their <<resources-user-get,User resource>>"),
-                        subsectionWithPath("_embedded.sw360:subscribers").description("An array of all release subscribers with email and link to their <<resources-user-get,User resource>>"),
-                        subsectionWithPath("_embedded.sw360:contributors").description("An array of all release contributors with email and link to their <<resources-user-get,User resource>>"),
-                        subsectionWithPath("_embedded.sw360:modifiedBy").description("A release modifiedBy with email and link to their <<resources-user-get,User resource>>"),
-                        subsectionWithPath("_embedded.sw360:createdBy").description("A release createdBy with email and link to their <<resources-user-get,User resource>>"),
-                        subsectionWithPath("_embedded.sw360:attachments").description("An array of all release attachments and link to their <<resources-attachment-get,Attachment resource>>"),
-                        subsectionWithPath("_embedded.sw360:cotsDetail").description("Cots detail information of release has component type = COTS "),
-                        subsectionWithPath("_links").description("<<resources-index-links,Links>> to other resources")
-                ));
-    }
-
-    private RestDocumentationResultHandler documentReleaseSPDXDocumentProperties() {
-        return this.documentationHandler.document(
-                links(
-                        linkWithRel("self").description("The <<resources-releases,Releases resource>>"),
-                        linkWithRel("sw360:component").description("The link to the corresponding component"),
-                        linkWithRel("curies").description("The curies for documentation")
-                ),
-                responseFields(
-                        fieldWithPath("name").description("The name of the release, optional"),
-                        fieldWithPath("version").description("The version of the release"),
-                        fieldWithPath("createdBy").description("Email of the release creator"),
-                        fieldWithPath("cpeid").description("CpeId of the release"),
-                        fieldWithPath("clearingState").description("The clearing of the release, possible values are " + Arrays.asList(ClearingState.values())),
-                        fieldWithPath("releaseDate").description("The date of this release"),
-                        fieldWithPath("createdOn").description("The creation date of the internal sw360 release"),
-                        fieldWithPath("componentType").description("The componentType of the release, possible values are " + Arrays.asList(ComponentType.values())),
-                        fieldWithPath("mainlineState").description("the mainline state of the release, possible values are: " + Arrays.asList(MainlineState.values())),
-                        subsectionWithPath("eccInformation").description("The eccInformation of this release"),
-                        fieldWithPath("sourceCodeDownloadurl").description("the source code download url of the release"),
-                        fieldWithPath("binaryDownloadurl").description("the binary download url of the release"),
-                        fieldWithPath("otherLicenseIds").description("An array of all other licenses associated with the release"),
-                        subsectionWithPath("externalIds").description("When releases are imported from other tools, the external ids can be stored here. Store as 'Single String' when single value, or 'Array of String' when multi-values"),
-                        subsectionWithPath("additionalData").description("A place to store additional data used by external tools"),
-                        fieldWithPath("languages").description("The language of the component"),
-                        subsectionWithPath("_embedded.sw360:licenses").description("An array of all main licenses with their fullName and link to their <<resources-license-get,License resource>>"),
-                        subsectionWithPath("_embedded.sw360:packages").description("An array of all the linked packages and link to their <<resources-package-get,Package resource>>"),
-                        fieldWithPath("operatingSystems").description("The OS on which the release operates"),
-                        fieldWithPath("softwarePlatforms").description("The software platforms of the component"),
-                        subsectionWithPath("clearingInformation").description("Clearing information of release"),
-                        subsectionWithPath("cotsDetails").description("Cots Details of release"),
-                        subsectionWithPath("_embedded.sw360:moderators").description("An array of all release moderators with email and link to their <<resources-user-get,User resource>>"),
-                        subsectionWithPath("_embedded.sw360:subscribers").description("An array of all release subscribers with email and link to their <<resources-user-get,User resource>>"),
-                        subsectionWithPath("_embedded.sw360:contributors").description("An array of all release contributors with email and link to their <<resources-user-get,User resource>>"),
-                        subsectionWithPath("_embedded.sw360:modifiedBy").description("A release modifiedBy with email and link to their <<resources-user-get,User resource>>"),
-                        subsectionWithPath("_embedded.sw360:createdBy").description("A release createdBy with email and link to their <<resources-user-get,User resource>>"),
-                        subsectionWithPath("_embedded.sw360:attachments").description("An array of all release attachments and link to their <<resources-attachment-get,Attachment resource>>"),
-                        subsectionWithPath("_embedded.sw360:cotsDetail").description("Cots detail information of release has component type = COTS "),
-                        subsectionWithPath("_embedded.sw360:spdxDocument").description("SPDXDocument information of release"),
-                        subsectionWithPath("_embedded.sw360:documentCreationInformation").description("DocumentCreationInformation  of release"),
-                        subsectionWithPath("_embedded.sw360:packageInformation").description("PackageInformation of release"),
-                        subsectionWithPath("_links").description("<<resources-index-links,Links>> to other resources")
-                ));
-    }
-
     public SPDXDocument mockDataSPDXDocument() {
         //SPDXDocument
         SPDXDocument spdxDocument = new SPDXDocument();
@@ -1108,13 +1023,8 @@ public class ReleaseSpecTest extends TestRestDocsSpecBase {
 
     @Test
     public void should_document_update_spdx() throws Exception {
-        //SPDXDocument
         SPDXDocument spdxDocument = mockDataSPDXDocument();
-
-        // DocumentCreationInformation
         DocumentCreationInformation documentCreationInformation = mockDataDocumentCreationInformation();
-
-        // PackageInformation
         PackageInformation packageInformation = mockDataPackageInformation();
 
         Map<String, Object> updateSPDX = new HashMap<>();
@@ -1129,7 +1039,22 @@ public class ReleaseSpecTest extends TestRestDocsSpecBase {
                         .content(this.objectMapper.writeValueAsString(updateSPDX))
                         .header("Authorization", "Bearer" + accessToken)
                         .accept(MediaTypes.HAL_JSON))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andDo(this.documentationHandler.document(
+                        links(
+                                linkWithRel("self").description("The <<resources-releases,Releases resource>>"),
+                                linkWithRel("sw360:component").description("The link to the corresponding component"),
+                                linkWithRel("curies").description("The curies for documentation")
+                        ),
+                        responseFields(
+                                fieldWithPath("name").description("The name of the release, optional"),
+                                fieldWithPath("version").description("The version of the release"),
+                                fieldWithPath("spdxId").description("The spdxId of the release"),
+                                subsectionWithPath("_embedded.sw360:spdxDocument").description("SPDXDocument information of release"),
+                                subsectionWithPath("_embedded.sw360:documentCreationInformation").description("DocumentCreationInformation  of release"),
+                                subsectionWithPath("_embedded.sw360:packageInformation").description("PackageInformation of release"),
+                                subsectionWithPath("_links").description("<<resources-index-links,Links>> to other resources")
+                        )));
     }
 
     @Test
