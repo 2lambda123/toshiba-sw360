@@ -531,8 +531,12 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
             return new ResponseEntity("Format SPDXDocument invalid!", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        restControllerHelper.updateSPDXDocumentFromRequest(spdxDocumentRequest, spdxDocumentActual, release.getModerators());
+        spdxDocumentRequest = restControllerHelper.updateSPDXDocumentFromRequest(spdxDocumentRequest, spdxDocumentActual, release.getModerators());
         RequestStatus requestStatus = releaseService.updateSPDXDocument(spdxDocumentRequest, release.getId(), user);
+
+        HalResource halRelease = createHalReleaseResource(release, true);
+        restControllerHelper.addEmbeddedDataToHalResourceRelease(halRelease, release);
+        restControllerHelper.addEmbeddedSpdxDocument(halRelease, spdxDocumentRequest);
 
         if (requestStatus == RequestStatus.SENT_TO_MODERATOR) {
             return new ResponseEntity(RESPONSE_BODY_FOR_MODERATION_REQUEST, HttpStatus.ACCEPTED);
@@ -545,18 +549,21 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
         if (null != reqBodyMap.get(DOCUMENT_CREATION_INFORMATION)) {
             DocumentCreationInformation documentCreationInformation = restControllerHelper.convertToDocumentCreationInformation(reqBodyMap.get(DOCUMENT_CREATION_INFORMATION));
             if (null != documentCreationInformation) {
-                restControllerHelper.updateDocumentCreationInformationFromRequest(documentCreationInformation, spdxDocumentActual, release.getModerators());
+                documentCreationInformation = restControllerHelper.updateDocumentCreationInformationFromRequest(documentCreationInformation, spdxDocumentActual, release.getModerators());
                 releaseService.updateDocumentCreationInformation(documentCreationInformation, spdxId, user);
+                restControllerHelper.addEmbeddedDocumentCreationInformation(halRelease, documentCreationInformation);
             }
         }
         if (null != reqBodyMap.get(PACKAGE_INFORMATION)) {
             PackageInformation packageInformation = restControllerHelper.convertToPackageInformation(reqBodyMap.get(PACKAGE_INFORMATION));
             if( null != packageInformation) {
-                restControllerHelper.updatePackageInformationFromRequest(packageInformation, spdxDocumentActual, release.getModerators());
+                packageInformation = restControllerHelper.updatePackageInformationFromRequest(packageInformation, spdxDocumentActual, release.getModerators());
                 releaseService.updatePackageInformation(packageInformation, spdxId, user);
+                restControllerHelper.addEmbeddedPackageInformation(halRelease, packageInformation);
             }
         }
-        return new ResponseEntity<>(spdxId, HttpStatus.OK);
+
+        return new ResponseEntity<>(halRelease, HttpStatus.OK);
     }
 
     @GetMapping(value = RELEASES_URL + "/{id}/attachments")

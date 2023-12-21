@@ -1428,30 +1428,31 @@ public class RestControllerHelper<T> {
         return mapper.convertValue(object, PackageInformation.class);
     }
 
-    public void updateSPDXDocumentFromRequest(SPDXDocument spdxDocumentRequest,
+    public SPDXDocument updateSPDXDocumentFromRequest(SPDXDocument spdxDocumentRequest,
                                               SPDXDocument spdxDocumentActual,
                                               Set<String> moderators) {
-        spdxDocumentRequest.setModerators(moderators)
+        return spdxDocumentRequest.setModerators(moderators)
                 .setId(spdxDocumentActual.getId())
                 .setSpdxDocumentCreationInfoId(spdxDocumentActual.getSpdxDocumentCreationInfoId())
                 .setSpdxPackageInfoIds(spdxDocumentActual.getSpdxPackageInfoIds())
                 .setRevision(spdxDocumentActual.getRevision());
     }
 
-    public void updateDocumentCreationInformationFromRequest(DocumentCreationInformation documentCreationInformation,
+    public DocumentCreationInformation updateDocumentCreationInformationFromRequest(DocumentCreationInformation documentCreationInformation,
                                                              SPDXDocument spdxDocumentActual,
                                                              Set<String> moderators) {
-        documentCreationInformation.setModerators(moderators)
+        return documentCreationInformation.setModerators(moderators)
                 .setId(spdxDocumentActual.getSpdxDocumentCreationInfoId());
     }
 
-    public void updatePackageInformationFromRequest(PackageInformation packageInformation,
+    public PackageInformation updatePackageInformationFromRequest(PackageInformation packageInformation,
                                                     SPDXDocument spdxDocumentActual,
                                                     Set<String> moderators) {
         packageInformation.setModerators(moderators);
         if (!CommonUtils.isNullOrEmptyCollection(spdxDocumentActual.getSpdxPackageInfoIds())) {
             packageInformation.setId(spdxDocumentActual.getSpdxPackageInfoIds().stream().findFirst().get());
         }
+        return packageInformation;
     }
 
     public String addSPDXDocument(Release release, User user) throws TException {
