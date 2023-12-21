@@ -976,8 +976,9 @@ public class ReleaseSpecTest extends TestRestDocsSpecBase {
         SPDXDocument spdxDocument = new SPDXDocument();
         spdxDocument.setSpdxFileInfoIds(new HashSet<>());
         // snippetInformations
-        SnippetInformation snippetInformation = new SnippetInformation();
-        snippetInformation.setSPDXID("SPDXRef-Snippet-11").setSnippetRanges(new HashSet<>(
+        SnippetInformation snippetInformation = new SnippetInformation()
+                .setSPDXID("SPDXRef-Snippet-11")
+                .setSnippetRanges(new HashSet<>(
                         Arrays.asList(new SnippetRange()
                                 .setRangeType("BYTE")
                                 .setStartPointer("11")
@@ -998,12 +999,12 @@ public class ReleaseSpecTest extends TestRestDocsSpecBase {
 
         spdxDocument.setSnippets(snippetInformations);
         //relationships
-        RelationshipsBetweenSPDXElements relationshipsBetweenSPDXElement = new RelationshipsBetweenSPDXElements();
-        relationshipsBetweenSPDXElement.setIndex(0)
+        RelationshipsBetweenSPDXElements relationshipsBetweenSPDXElement = new RelationshipsBetweenSPDXElements()
                 .setRelationshipComment("11")
                 .setRelationshipType("11")
                 .setSpdxElementId("11")
-                .setRelatedSpdxElement("11");
+                .setRelatedSpdxElement("11")
+                .setIndex(0);
 
         Set<RelationshipsBetweenSPDXElements> relationshipsBetweenSPDXElements = new HashSet<>(Arrays.asList(relationshipsBetweenSPDXElement));
 
@@ -1041,36 +1042,67 @@ public class ReleaseSpecTest extends TestRestDocsSpecBase {
     }
 
     public DocumentCreationInformation mockDataDocumentCreationInformation() {
-        DocumentCreationInformation documentCreationInformation = new DocumentCreationInformation();
-
-        documentCreationInformation.setSpdxVersion("SPDX-3333").setDataLicense("11").setSPDXID("SPDXRef-1111")
-                .setName("11").setDocumentNamespace("11").setExternalDocumentRefs(new HashSet<>(Arrays.asList(
-                        new ExternalDocumentReferences().setExternalDocumentId("11").setSpdxDocument("11").setIndex(0)
-                                .setChecksum(new CheckSum().setChecksumValue("11").setAlgorithm("11").setIndex(0)))))
-                .setLicenseListVersion("11").setCreator(new HashSet<>(Arrays.asList(new Creator().setType("Person")
-                        .setValue("Test Admin (admin@sw360.org)").setIndex(0))))
-                .setCreated("2023-11-27T07:25:40Z").setCreatorComment("11").setDocumentComment("11").setCreatedBy("admin@sw360.org")
+        DocumentCreationInformation documentCreationInformation = new DocumentCreationInformation()
+                .setSpdxVersion("SPDX-3333")
+                .setDataLicense("11")
+                .setSPDXID("SPDXRef-1111")
+                .setName("11")
+                .setDocumentNamespace("11")
+                .setExternalDocumentRefs(new HashSet<>(Arrays.asList(new ExternalDocumentReferences()
+                        .setExternalDocumentId("11")
+                        .setSpdxDocument("11")
+                        .setIndex(0)
+                        .setChecksum(new CheckSum()
+                                .setChecksumValue("11")
+                                .setAlgorithm("11")
+                                .setIndex(0)))))
+                .setLicenseListVersion("11")
+                .setCreator(new HashSet<>(Arrays.asList(new Creator()
+                        .setType("Person")
+                        .setValue("Test Admin (admin@sw360.org)")
+                        .setIndex(0))))
+                .setCreated("2023-11-27T07:25:40Z")
+                .setCreatorComment("11")
+                .setDocumentComment("11")
+                .setCreatedBy("admin@sw360.org")
                 .setModerators(new HashSet<>());
         return documentCreationInformation;
     }
 
     public PackageInformation mockDataPackageInformation() {
-        PackageInformation packageInformation = new PackageInformation();
-        packageInformation.setName("11").setSPDXID("SPDXRef-Package-11").setVersionInfo("11")
-                .setPackageFileName("11").setSupplier("Organization: 11").setOriginator("Organization: 11")
-                .setDownloadLocation("11").setFilesAnalyzed(true)
+        PackageInformation packageInformation = new PackageInformation()
+                .setName("11")
+                .setSPDXID("SPDXRef-Package-11")
+                .setVersionInfo("11")
+                .setPackageFileName("11")
+                .setSupplier("Organization: 11")
+                .setOriginator("Organization: 11")
+                .setDownloadLocation("11")
+                .setFilesAnalyzed(true)
                 .setPackageVerificationCode(new PackageVerificationCode().setExcludedFiles(new HashSet<>(Arrays.asList("11"))).setValue("11"))
                 .setRelationships(new HashSet<>(Arrays.asList(new RelationshipsBetweenSPDXElements()
                         .setSpdxElementId("11").setRelationshipType("11").setRelatedSpdxElement("11")
                         .setRelationshipComment("11").setIndex(0))))
                 .setChecksums(new HashSet<>(Arrays.asList(new CheckSum().setAlgorithm("11").setChecksumValue("1111"))))
-                .setHomepage("11").setSourceInfo("11").setLicenseConcluded("11").setLicenseInfoFromFiles(new HashSet<>(Arrays.asList("11")))
-                .setLicenseDeclared("11").setLicenseComments("11").setCopyrightText("11").setSummary("11").setDescription("11")
-                .setPackageComment("11").setExternalRefs(new HashSet<>(Arrays.asList(new ExternalReference().setReferenceCategory("SECURITY")
+                .setHomepage("11")
+                .setSourceInfo("11")
+                .setLicenseConcluded("11")
+                .setLicenseInfoFromFiles(new HashSet<>(Arrays.asList("11")))
+                .setLicenseDeclared("11")
+                .setLicenseComments("11")
+                .setCopyrightText("11")
+                .setSummary("11")
+                .setDescription("11")
+                .setPackageComment("11")
+                .setExternalRefs(new HashSet<>(Arrays.asList(new ExternalReference().setReferenceCategory("SECURITY")
                         .setReferenceLocator("11").setReferenceType("cpe22Type").setComment("11").setIndex(0))))
-                .setAttributionText(new HashSet<>(Arrays.asList("11"))).setAnnotations(new HashSet<>()).setPrimaryPackagePurpose("11")
-                .setReleaseDate("2023-11-10T07:30:39Z").setBuiltDate("2023-11-09T07:29:43Z").setValidUntilDate("2023-11-22T07:30:47Z")
-                .setModerators(new HashSet<>()).setIndex(0);
+                .setAttributionText(new HashSet<>(Arrays.asList("11")))
+                .setAnnotations(new HashSet<>()).setPrimaryPackagePurpose("11")
+                .setReleaseDate("2023-11-10T07:30:39Z")
+                .setBuiltDate("2023-11-09T07:29:43Z")
+                .setValidUntilDate("2023-11-22T07:30:47Z")
+                .setModerators(new HashSet<>())
+                .setIndex(0);
         return packageInformation;
     }
 
