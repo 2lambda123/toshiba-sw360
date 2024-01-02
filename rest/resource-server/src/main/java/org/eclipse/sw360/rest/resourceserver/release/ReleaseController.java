@@ -520,6 +520,9 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
         SPDXDocument spdxDocumentActual = CommonUtils.isNullEmptyOrWhitespace(spdxId)
                 ? releaseService.getSPDXDocumentById(release.getSpdxId(), user)
                 : releaseService.getSPDXDocumentById(spdxId, user);
+        if(reqBodyMap.isEmpty()) {
+            return new ResponseEntity<>(spdxDocumentActual.getId(), HttpStatus.OK);
+        }
         // update SPDXDocument
         if (null == reqBodyMap.get(SPDX_DOCUMENT)) {
             return new ResponseEntity<>("Require SPDXDocument!", HttpStatus.NOT_FOUND);
