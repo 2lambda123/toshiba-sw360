@@ -840,7 +840,8 @@ public class JacksonCustomizations {
                 "moderatorsSize",
                 "permissionsSize",
                 "externalDocumentRefsSize",
-                "creatorSize"
+                "creatorSize",
+                "spdxid"
         })
         static abstract class DocumentCreationInformationMixin extends DocumentCreationInformation {
         }
@@ -901,7 +902,8 @@ public class JacksonCustomizations {
                 "relationshipsSize",
                 "annotationsSize",
                 "licenseInfoFromFilesSize",
-                "attributionTextSize"
+                "attributionTextSize",
+                "spdxid"
         })
         static abstract class PackageInformationMixin extends PackageInformation {
         }
