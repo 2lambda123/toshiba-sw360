@@ -11,7 +11,6 @@
  */
 package org.eclipse.sw360.rest.resourceserver.release;
 
-import static com.google.common.base.Strings.isNullOrEmpty;
 import static org.eclipse.sw360.datahandler.common.WrappedException.wrapTException;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 
@@ -26,7 +25,6 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Sets;
 import lombok.NonNull;
@@ -50,16 +48,12 @@ import org.eclipse.sw360.datahandler.thrift.licenseinfo.LicenseInfo;
 import org.eclipse.sw360.datahandler.thrift.licenseinfo.LicenseInfoParsingResult;
 import org.eclipse.sw360.datahandler.thrift.licenseinfo.LicenseNameWithText;
 import org.eclipse.sw360.datahandler.thrift.licenseinfo.LicenseInfoParsingResult;
-import org.eclipse.sw360.datahandler.thrift.packages.Package;
 import org.eclipse.sw360.datahandler.thrift.projects.Project;
 import org.eclipse.sw360.datahandler.thrift.components.Component;
 import org.eclipse.sw360.datahandler.thrift.components.ExternalToolProcess;
 import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.DocumentCreationInformation;
-import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.DocumentCreationInformationService;
 import org.eclipse.sw360.datahandler.thrift.spdx.spdxdocument.SPDXDocument;
-import org.eclipse.sw360.datahandler.thrift.spdx.spdxdocument.SPDXDocumentService;
 import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformation;
-import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformationService;
 import org.eclipse.sw360.datahandler.thrift.users.User;
 import org.eclipse.sw360.datahandler.thrift.vendors.Vendor;
 import org.eclipse.sw360.datahandler.thrift.vulnerabilities.ReleaseVulnerabilityRelation;
@@ -503,7 +497,7 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
 
     @PreAuthorize("hasAuthority('WRITE')")
     @PatchMapping(value = RELEASES_URL + "/{id}/spdx")
-    public ResponseEntity<?> updateSPDX( @RequestBody Map<String, Object> reqBodyMap, @PathVariable("id") String releaseId) throws TException, JsonProcessingException {
+    public ResponseEntity<?> updateSPDX( @RequestBody Map<String, Object> reqBodyMap, @PathVariable("id") String releaseId) throws TException {
         if (!SW360Constants.SPDX_DOCUMENT_ENABLED) {
             return new ResponseEntity<>("Feature SPDXDocument disable", HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -520,35 +514,28 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
         SPDXDocument spdxDocumentActual = CommonUtils.isNullEmptyOrWhitespace(spdxId)
                 ? releaseService.getSPDXDocumentById(release.getSpdxId(), user)
                 : releaseService.getSPDXDocumentById(spdxId, user);
-        if(reqBodyMap.isEmpty()) {
-            return new ResponseEntity<>(spdxDocumentActual.getId(), HttpStatus.OK);
-        }
-        // update SPDXDocument
-        if (null == reqBodyMap.get(SPDX_DOCUMENT)) {
-            return new ResponseEntity<>("Require SPDXDocument!", HttpStatus.NOT_FOUND);
-        }
-
-        SPDXDocument spdxDocumentRequest = restControllerHelper.convertToSPDXDocument(reqBodyMap.get(SPDX_DOCUMENT));
-
-        if (null == spdxDocumentRequest) {
-            return new ResponseEntity("Format SPDXDocument invalid!", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-
-        spdxDocumentRequest = restControllerHelper.updateSPDXDocumentFromRequest(spdxDocumentRequest, spdxDocumentActual, release.getModerators());
-        RequestStatus requestStatus = releaseService.updateSPDXDocument(spdxDocumentRequest, release.getId(), user);
-
-        HalResource halRelease = createHalReleaseResource(release, true);
-        restControllerHelper.addEmbeddedDataToHalResourceRelease(halRelease, release);
-        restControllerHelper.addEmbeddedSpdxDocument(halRelease, spdxDocumentRequest);
-
-        if (requestStatus == RequestStatus.SENT_TO_MODERATOR) {
-            return new ResponseEntity(RESPONSE_BODY_FOR_MODERATION_REQUEST, HttpStatus.ACCEPTED);
-        }
-
-        spdxId = spdxDocumentRequest.getId();
+        spdxId = spdxDocumentActual.getId();
         if (CommonUtils.isNullEmptyOrWhitespace(spdxId)) {
             throw new HttpMessageNotReadableException("Update SPDXDocument Failed!");
         }
+        if(reqBodyMap.isEmpty()) {
+            return ResponseEntity.ok(spdxId);
+        }
+        HalResource<Release> halRelease = createHalReleaseResource(release, false);
+        if (null != reqBodyMap.get(SPDX_DOCUMENT)) {
+            SPDXDocument spdxDocumentRequest = restControllerHelper.convertToSPDXDocument(reqBodyMap.get(SPDX_DOCUMENT));
+            if (null != spdxDocumentRequest) {
+                spdxDocumentRequest = restControllerHelper.updateSPDXDocumentFromRequest(spdxDocumentRequest, spdxDocumentActual, release.getModerators());
+                RequestStatus requestStatus = releaseService.updateSPDXDocument(spdxDocumentRequest, release.getId(), user);
+                if (requestStatus == RequestStatus.SENT_TO_MODERATOR) {
+                    return ResponseEntity.accepted().body(RESPONSE_BODY_FOR_MODERATION_REQUEST);
+                }
+                restControllerHelper.addEmbeddedSpdxDocument(halRelease, spdxDocumentRequest);
+            }
+        } else {
+            restControllerHelper.addEmbeddedSpdxDocument(halRelease, spdxDocumentActual);
+        }
+
         if (null != reqBodyMap.get(DOCUMENT_CREATION_INFORMATION)) {
             DocumentCreationInformation documentCreationInformation = restControllerHelper.convertToDocumentCreationInformation(reqBodyMap.get(DOCUMENT_CREATION_INFORMATION));
             if (null != documentCreationInformation) {
@@ -557,6 +544,7 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
                 restControllerHelper.addEmbeddedDocumentCreationInformation(halRelease, documentCreationInformation);
             }
         }
+
         if (null != reqBodyMap.get(PACKAGE_INFORMATION)) {
             PackageInformation packageInformation = restControllerHelper.convertToPackageInformation(reqBodyMap.get(PACKAGE_INFORMATION));
             if( null != packageInformation) {
