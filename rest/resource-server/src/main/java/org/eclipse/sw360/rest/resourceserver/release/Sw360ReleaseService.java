@@ -251,23 +251,57 @@ public class Sw360ReleaseService implements AwareOfRestServices<Release> {
         if (isNullOrEmpty(spdxDocumentRequest.getReleaseId()) && !isNullOrEmpty(releaseId)) {
             spdxDocumentRequest.setReleaseId(releaseId);
         }
-        return spdxClient.updateSPDXDocument(spdxDocumentRequest, user);
+        SPDXDocument spdxDocumentUpdate = prepareUpdateSPDXDocument(getSPDXDocumentById(spdxDocumentRequest.getId(), user),spdxDocumentRequest);
+        return spdxClient.updateSPDXDocument(spdxDocumentUpdate, user);
     }
 
-    public RequestStatus updateDocumentCreationInformation(DocumentCreationInformation documentCreationInformation, String spdxId, User user) throws TException {
+    public SPDXDocument prepareUpdateSPDXDocument(SPDXDocument spdxDocumentActual, SPDXDocument spdxDocumentRequest) {
+        for (SPDXDocument._Fields field : SPDXDocument._Fields.values()) {
+            Object fieldValue = spdxDocumentRequest.getFieldValue(field);
+            if (fieldValue != null) {
+                spdxDocumentActual.setFieldValue(field, fieldValue);
+            }
+        }
+        return spdxDocumentActual;
+    }
+
+    public RequestStatus updateDocumentCreationInformation(DocumentCreationInformation documentCreationInformationRequest, String spdxId, User user) throws TException {
         DocumentCreationInformationService.Iface documentClient = new ThriftClients().makeSPDXDocumentInfoClient();
-        if (isNullOrEmpty(documentCreationInformation.getSpdxDocumentId())) {
-            documentCreationInformation.setSpdxDocumentId(spdxId);
+        if (isNullOrEmpty(documentCreationInformationRequest.getSpdxDocumentId())) {
+            documentCreationInformationRequest.setSpdxDocumentId(spdxId);
         }
-        return documentClient.updateDocumentCreationInformation(documentCreationInformation, user);
+
+        DocumentCreationInformation documentCreationInformationUpdate = prepareUpdateDocumentCreationInformation(getDocumentCreationInformationById(documentCreationInformationRequest.getId(), user), documentCreationInformationRequest);
+        return documentClient.updateDocumentCreationInformation(documentCreationInformationUpdate, user);
     }
 
-    public RequestStatus updatePackageInformation(PackageInformation packageInformation, String spdxId, User user) throws TException {
-        PackageInformationService.Iface packageClient = new ThriftClients().makeSPDXPackageInfoClient();
-        if (isNullOrEmpty(packageInformation.getSpdxDocumentId())) {
-            packageInformation.setSpdxDocumentId(spdxId);
+    public DocumentCreationInformation prepareUpdateDocumentCreationInformation(DocumentCreationInformation documentCreationInformationUpdate, DocumentCreationInformation documentCreationInformationRequest) {
+        for (DocumentCreationInformation._Fields field : DocumentCreationInformation._Fields.values()) {
+            Object fieldValue = documentCreationInformationRequest.getFieldValue(field);
+            if (fieldValue != null) {
+                documentCreationInformationUpdate.setFieldValue(field, fieldValue);
+            }
         }
-        return packageClient.updatePackageInformation(packageInformation, user);
+        return documentCreationInformationUpdate;
+    }
+
+    public RequestStatus updatePackageInformation(PackageInformation packageInformationRequest, String spdxId, User user) throws TException {
+        PackageInformationService.Iface packageClient = new ThriftClients().makeSPDXPackageInfoClient();
+        if (isNullOrEmpty(packageInformationRequest.getSpdxDocumentId())) {
+            packageInformationRequest.setSpdxDocumentId(spdxId);
+        }
+        PackageInformation packageInformationUpdate = prepareUpdatePackageInformation(getPackageInformationById(packageInformationRequest.getId(), user), packageInformationRequest);
+        return packageClient.updatePackageInformation(packageInformationUpdate, user);
+    }
+
+    public PackageInformation prepareUpdatePackageInformation(PackageInformation packageInformationUpdate, PackageInformation packageInformationRequest) {
+        for (PackageInformation._Fields field : PackageInformation._Fields.values()) {
+            Object fieldValue = packageInformationRequest.getFieldValue(field);
+            if (fieldValue != null) {
+                packageInformationUpdate.setFieldValue(field, fieldValue);
+            }
+        }
+        return packageInformationUpdate;
     }
 
     public RequestStatus deleteRelease(String releaseId, User sw360User) throws TException {

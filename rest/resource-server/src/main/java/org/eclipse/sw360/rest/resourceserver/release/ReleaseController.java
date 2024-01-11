@@ -518,10 +518,12 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
         if (CommonUtils.isNullEmptyOrWhitespace(spdxId)) {
             throw new HttpMessageNotReadableException("Update SPDXDocument Failed!");
         }
-        if(reqBodyMap.isEmpty()) {
-            return ResponseEntity.ok(spdxId);
-        }
         HalResource<Release> halRelease = createHalReleaseResource(release, false);
+
+        if(reqBodyMap.isEmpty()) {
+            return ResponseEntity.ok(halRelease);
+        }
+
         if (null != reqBodyMap.get(SPDX_DOCUMENT)) {
             SPDXDocument spdxDocumentRequest = restControllerHelper.convertToSPDXDocument(reqBodyMap.get(SPDX_DOCUMENT));
             if (null != spdxDocumentRequest) {
