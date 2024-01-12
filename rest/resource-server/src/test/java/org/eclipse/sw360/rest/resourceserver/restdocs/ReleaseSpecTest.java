@@ -998,7 +998,7 @@ public class ReleaseSpecTest extends TestRestDocsSpecBase {
                 .setRelationships(new HashSet<>(Arrays.asList(new RelationshipsBetweenSPDXElements()
                         .setSpdxElementId("11").setRelationshipType("11").setRelatedSpdxElement("11")
                         .setRelationshipComment("11").setIndex(0))))
-                .setChecksums(new HashSet<>(Arrays.asList(new CheckSum().setAlgorithm("11").setChecksumValue("1111"))))
+                .setChecksums(new HashSet<>(Arrays.asList(new CheckSum().setAlgorithm("11").setChecksumValue("1111").setIndex(0))))
                 .setHomepage("11")
                 .setSourceInfo("11")
                 .setLicenseConcluded("11")
