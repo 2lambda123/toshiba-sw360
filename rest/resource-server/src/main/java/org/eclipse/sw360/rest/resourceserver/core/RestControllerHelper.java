@@ -1651,18 +1651,23 @@ public class RestControllerHelper<T> {
     }
 
     public boolean checkIndexSnippetRanges(Set<SnippetInformation> snippetInformations) {
-        if(!CommonUtils.isNotEmpty(snippetInformations)) {
+        if(CommonUtils.isNullOrEmptyCollection(snippetInformations)) {
             return true;
         }
         Set<SnippetRange> snippetRanges = new HashSet<>();
         for (SnippetInformation snippetInformation: snippetInformations) {
-            snippetRanges.addAll(snippetInformation.getSnippetRanges());
+            if(!CommonUtils.isNullOrEmptyCollection(snippetInformation.getSnippetRanges())) {
+                if(!checkDuplicateIndex(snippetInformation.getSnippetRanges().stream().map(SnippetRange::getIndex).collect(Collectors.toList()))) {
+                    return false;
+                }
+                snippetRanges.addAll(snippetInformation.getSnippetRanges());
+            }
         }
-        List<Integer> indexOfSnippetRanges = snippetInformations.stream().map(SnippetInformation::getIndex).collect(Collectors.toList());
+        List<Integer> indexOfSnippetRanges = snippetRanges.stream().map(SnippetRange::getIndex).collect(Collectors.toList());
         if(snippetRanges.size() != indexOfSnippetRanges.size()) {
             return false;
         }
-        return checkDuplicateIndex(indexOfSnippetRanges);
+        return true;
     }
 
     public boolean checkIndexRelationships(Set<RelationshipsBetweenSPDXElements> relationships) {
