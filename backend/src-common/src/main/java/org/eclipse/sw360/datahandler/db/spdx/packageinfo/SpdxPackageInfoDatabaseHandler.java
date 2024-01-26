@@ -12,9 +12,15 @@ package org.eclipse.sw360.datahandler.db.spdx.packageinfo;
 
 import com.cloudant.client.api.CloudantClient;
 
+import com.google.common.collect.Sets;
 import org.eclipse.sw360.datahandler.cloudantclient.DatabaseConnectorCloudant;
 import org.eclipse.sw360.datahandler.db.spdx.document.SpdxDocumentRepository;
 import org.eclipse.sw360.datahandler.thrift.*;
+import org.eclipse.sw360.datahandler.thrift.spdx.annotations.Annotations;
+import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.DocumentCreationInformation;
+import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.ExternalDocumentReferences;
+import org.eclipse.sw360.datahandler.thrift.spdx.relationshipsbetweenspdxelements.RelationshipsBetweenSPDXElements;
+import org.eclipse.sw360.datahandler.thrift.spdx.snippetinformation.SnippetInformation;
 import org.eclipse.sw360.datahandler.thrift.users.RequestedAction;
 import org.eclipse.sw360.datahandler.thrift.users.User;
 import org.eclipse.sw360.datahandler.thrift.spdx.spdxdocument.SPDXDocument;
@@ -30,6 +36,8 @@ import org.apache.logging.log4j.LogManager;
 import java.net.MalformedURLException;
 import java.util.*;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
 import com.google.common.collect.Lists;
 
 import org.eclipse.sw360.datahandler.common.DatabaseSettings;
@@ -154,6 +162,16 @@ public class SpdxPackageInfoDatabaseHandler {
         if (CommonUtils.isNullEmptyOrWhitespace(packageInfo.getRevision())) {
             packageInfo.setRevision(actual.getRevision());
         }
+        if(packageInfo.getExternalRefs().size() < actual.getExternalRefs().size()) {
+            updateExternalRefs(packageInfo);
+        }
+
+        if(packageInfo.getAnnotations().size() < actual.getAnnotations().size()) {
+            updateAnnotations(packageInfo);
+        }
+        if(packageInfo.getRelationships().size() < actual.getRelationships().size()) {
+            updateRelationships(packageInfo);
+        }
         assertNotNull(actual, "Could not find SPDX Package Information to update!");
         if (!makePermission(packageInfo, user).isActionAllowed(RequestedAction.WRITE)) {
             if (isChanged(actual, packageInfo)) {
@@ -165,6 +183,48 @@ public class SpdxPackageInfoDatabaseHandler {
         PackageInfoRepository.update(packageInfo);
         dbHandlerUtil.addChangeLogs(packageInfo, actual, user.getEmail(), Operation.UPDATE, null, Lists.newArrayList(), null, null);
         return RequestStatus.SUCCESS;
+    }
+
+    public void updateRelationships(PackageInformation request) {
+        List<RelationshipsBetweenSPDXElements> relationshipsBetweenSPDXElements = request.getRelationships().stream().collect(Collectors.toList());
+        Collections.sort(relationshipsBetweenSPDXElements, new Comparator<RelationshipsBetweenSPDXElements>() {
+            @Override
+            public int compare(RelationshipsBetweenSPDXElements o1, RelationshipsBetweenSPDXElements o2) {
+                return o1.getIndex() > o2.getIndex() ? 1 : (o1.getIndex() == o2.getIndex() ? 0 : -1);
+            }
+        });
+        for (int i = 0; i<relationshipsBetweenSPDXElements.size() ; i++) {
+            relationshipsBetweenSPDXElements.get(i).setIndex(i);
+        }
+        request.setRelationships(relationshipsBetweenSPDXElements.stream().collect(Collectors.toSet()));
+    }
+
+    public void updateAnnotations(PackageInformation request) {
+        List<Annotations> annotations = request.getAnnotations().stream().collect(Collectors.toList());
+        Collections.sort(annotations, new Comparator<Annotations>() {
+            @Override
+            public int compare(Annotations o1, Annotations o2) {
+                return o1.getIndex() > o2.getIndex() ? 1 : (o1.getIndex() == o2.getIndex() ? 0 : -1);
+            }
+        });
+        for (int i = 0; i<annotations.size() ; i++) {
+            annotations.get(i).setIndex(i);
+        }
+        request.setAnnotations(annotations.stream().collect(Collectors.toSet()));
+    }
+
+    public void updateExternalRefs(PackageInformation request) {
+        List<ExternalReference> externalReferenceLists = request.getExternalRefs().stream().collect(Collectors.toList());
+        Collections.sort(externalReferenceLists, new Comparator<ExternalReference>() {
+            @Override
+            public int compare(ExternalReference o1, ExternalReference o2) {
+                return o1.getIndex() > o2.getIndex() ? 1 : (o1.getIndex() == o2.getIndex() ? 0 : -1);
+            }
+        });
+        for (int i = 0; i<externalReferenceLists.size() ; i++) {
+            externalReferenceLists.get(i).setIndex(i);
+        }
+        request.setExternalRefs(externalReferenceLists.stream().collect(Collectors.toSet()));
     }
 
     public RequestSummary updatePackageInformations(Set<PackageInformation> packageInfos, User user) throws SW360Exception {

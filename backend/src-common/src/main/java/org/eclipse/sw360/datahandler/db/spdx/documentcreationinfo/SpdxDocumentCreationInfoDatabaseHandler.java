@@ -13,9 +13,11 @@ package org.eclipse.sw360.datahandler.db.spdx.documentcreationinfo;
 import com.cloudant.client.api.CloudantClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Sets;
 import org.eclipse.sw360.datahandler.cloudantclient.DatabaseConnectorCloudant;
 import org.eclipse.sw360.datahandler.db.spdx.document.SpdxDocumentRepository;
 import org.eclipse.sw360.datahandler.thrift.*;
+import org.eclipse.sw360.datahandler.thrift.spdx.relationshipsbetweenspdxelements.RelationshipsBetweenSPDXElements;
 import org.eclipse.sw360.datahandler.thrift.users.RequestedAction;
 import org.eclipse.sw360.datahandler.thrift.users.User;
 import org.eclipse.sw360.datahandler.thrift.spdx.spdxdocument.SPDXDocument;
@@ -31,6 +33,8 @@ import org.apache.logging.log4j.LogManager;
 import java.net.MalformedURLException;
 import java.util.*;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
 import com.google.common.collect.Lists;
 
 import org.eclipse.sw360.datahandler.common.DatabaseSettings;
@@ -133,6 +137,9 @@ public class SpdxDocumentCreationInfoDatabaseHandler {
         documentCreationInfo.setRevision(actual.getRevision());
         assertNotNull(actual, "Could not find SPDX Document Creation Information to update!");
         prepareSpdxDocumentCreationInfo(documentCreationInfo);
+        if(documentCreationInfo.getExternalDocumentRefs().size() < actual.getExternalDocumentRefs().size()) {
+            updateExternalDocumentReferences(documentCreationInfo);
+        }
         if (!makePermission(documentCreationInfo, user).isActionAllowed(RequestedAction.WRITE)) {
             if (isChanged(actual, documentCreationInfo)) {
                 return moderator.updateSpdxDocumentCreationInfo(documentCreationInfo, user);
@@ -143,6 +150,21 @@ public class SpdxDocumentCreationInfoDatabaseHandler {
         SPDXDocumentCreationInfoRepository.update(documentCreationInfo);
         dbHandlerUtil.addChangeLogs(documentCreationInfo, actual, user.getEmail(), Operation.UPDATE, null, Lists.newArrayList(), null, null);
         return RequestStatus.SUCCESS;
+    }
+
+    // Handle index of ExternalReferences
+    public void updateExternalDocumentReferences(DocumentCreationInformation request) {
+        List<ExternalDocumentReferences> externalDocumentReferences = request.getExternalDocumentRefs().stream().collect(Collectors.toList());
+        Collections.sort(externalDocumentReferences, new Comparator<ExternalDocumentReferences>() {
+            @Override
+            public int compare(ExternalDocumentReferences o1, ExternalDocumentReferences o2) {
+                return o1.getIndex() > o2.getIndex() ? 1 : (o1.getIndex() == o2.getIndex() ? 0 : -1);
+            }
+        });
+        for (int i = 0; i<externalDocumentReferences.size() ; i++) {
+            externalDocumentReferences.get(i).setIndex(i);
+        }
+        request.setExternalDocumentRefs(externalDocumentReferences.stream().collect(Collectors.toSet()));
     }
 
     public RequestStatus updateDocumentCreationInfomationFromModerationRequest(DocumentCreationInformation documentCreationInfoAdditions, DocumentCreationInformation documentCreationInfoDeletions, User user) throws SW360Exception {

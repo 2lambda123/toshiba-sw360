@@ -14,13 +14,20 @@ import com.cloudant.client.api.CloudantClient;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Sets;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TType;
 import org.eclipse.sw360.datahandler.cloudantclient.DatabaseConnectorCloudant;
 import org.eclipse.sw360.datahandler.common.DatabaseSettings;
 import org.eclipse.sw360.datahandler.thrift.*;
+import org.eclipse.sw360.datahandler.thrift.spdx.annotations.Annotations;
 import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.DocumentCreationInformation;
 import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.DocumentCreationInformationService;
+import org.eclipse.sw360.datahandler.thrift.spdx.documentcreationinformation.ExternalDocumentReferences;
+import org.eclipse.sw360.datahandler.thrift.spdx.otherlicensinginformationdetected.OtherLicensingInformationDetected;
+import org.eclipse.sw360.datahandler.thrift.spdx.relationshipsbetweenspdxelements.RelationshipsBetweenSPDXElements;
+import org.eclipse.sw360.datahandler.thrift.spdx.snippetinformation.SnippetInformation;
+import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.ExternalReference;
 import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformation;
 import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageInformationService;
 import org.eclipse.sw360.datahandler.thrift.spdx.spdxpackageinfo.PackageVerificationCode;
@@ -43,6 +50,8 @@ import org.apache.logging.log4j.LogManager;
 import java.net.MalformedURLException;
 import java.util.*;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
 import com.google.common.collect.Lists;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
@@ -154,6 +163,19 @@ public class SpdxDocumentDatabaseHandler {
         prepareSPDXDocument(spdx);
         SPDXDocument actual = SPDXDocumentRepository.get(spdx.getId());
         assertNotNull(actual, "Could not find SPDX Document to update!");
+        if(spdx.getSnippets().size() < actual.getSnippets().size()) {
+            updateSnippets(spdx);
+        }
+        if(spdx.getAnnotations().size() < actual.getAnnotations().size()) {
+            updateAnnotations(spdx);
+        }
+        if(spdx.getRelationships().size() < actual.getRelationships().size()) {
+            updateRelationships(spdx);
+        }
+        if(spdx.getOtherLicensingInformationDetecteds().size() < actual.getOtherLicensingInformationDetecteds().size()) {
+            updateOtherLicensingInformationDetecteds(spdx);
+        }
+
         if (!makePermission(spdx, user).isActionAllowed(RequestedAction.WRITE)) {
             if (isChanged(actual, spdx)) {
                 return moderator.updateSPDXDocument(spdx, user);
@@ -164,6 +186,62 @@ public class SpdxDocumentDatabaseHandler {
         SPDXDocumentRepository.update(spdx);
         dbHandlerUtil.addChangeLogs(spdx, actual, user.getEmail(), Operation.UPDATE, null, Lists.newArrayList(), null, null);
         return RequestStatus.SUCCESS;
+    }
+
+    public void updateOtherLicensingInformationDetecteds(SPDXDocument request) {
+        List<OtherLicensingInformationDetected> otherLicensingInformationDetecteds = request.getOtherLicensingInformationDetecteds().stream().collect(Collectors.toList());
+        Collections.sort(otherLicensingInformationDetecteds, new Comparator<OtherLicensingInformationDetected>() {
+            @Override
+            public int compare(OtherLicensingInformationDetected o1, OtherLicensingInformationDetected o2) {
+                return o1.getIndex() > o2.getIndex() ? 1 : (o1.getIndex() == o2.getIndex() ? 0 : -1);
+            }
+        });
+        for (int i = 0; i < otherLicensingInformationDetecteds.size() ; i++) {
+            otherLicensingInformationDetecteds.get(i).setIndex(i);
+        }
+        request.setOtherLicensingInformationDetecteds(otherLicensingInformationDetecteds.stream().collect(Collectors.toSet()));
+    }
+
+    public void updateRelationships(SPDXDocument request) {
+        List<RelationshipsBetweenSPDXElements> relationshipsBetweenSPDXElements = request.getRelationships().stream().collect(Collectors.toList());
+        Collections.sort(relationshipsBetweenSPDXElements, new Comparator<RelationshipsBetweenSPDXElements>() {
+            @Override
+            public int compare(RelationshipsBetweenSPDXElements o1, RelationshipsBetweenSPDXElements o2) {
+                return o1.getIndex() > o2.getIndex() ? 1 : (o1.getIndex() == o2.getIndex() ? 0 : -1);
+            }
+        });
+        for (int i = 0; i<relationshipsBetweenSPDXElements.size() ; i++) {
+            relationshipsBetweenSPDXElements.get(i).setIndex(i);
+        }
+        request.setRelationships(relationshipsBetweenSPDXElements.stream().collect(Collectors.toSet()));
+    }
+
+    public void updateAnnotations(SPDXDocument request) {
+        List<Annotations> annotations = request.getAnnotations().stream().collect(Collectors.toList());
+        Collections.sort(annotations, new Comparator<Annotations>() {
+            @Override
+            public int compare(Annotations o1, Annotations o2) {
+                return o1.getIndex() > o2.getIndex() ? 1 : (o1.getIndex() == o2.getIndex() ? 0 : -1);
+            }
+        });
+        for (int i = 0; i<annotations.size() ; i++) {
+            annotations.get(i).setIndex(i);
+        }
+        request.setAnnotations(annotations.stream().collect(Collectors.toSet()));
+    }
+
+    public void updateSnippets(SPDXDocument request) {
+        List<SnippetInformation> snippetInformations = request.getSnippets().stream().collect(Collectors.toList());
+        Collections.sort(snippetInformations, new Comparator<SnippetInformation>() {
+            @Override
+            public int compare(SnippetInformation o1, SnippetInformation o2) {
+                return o1.getIndex() > o2.getIndex() ? 1 : (o1.getIndex() == o2.getIndex() ? 0 : -1);
+            }
+        });
+        for (int i = 0; i<snippetInformations.size() ; i++) {
+            snippetInformations.get(i).setIndex(i);
+        }
+        request.setSnippets(snippetInformations.stream().collect(Collectors.toSet()));
     }
 
     public RequestStatus updateSPDXDocumentFromModerationRequest(SPDXDocument spdxAdditions, SPDXDocument spdxDeletions, User user) throws SW360Exception {
