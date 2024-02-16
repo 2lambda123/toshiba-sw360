@@ -572,4 +572,15 @@ public class Sw360ProjectService implements AwareOfRestServices<Project> {
             return 0;
         }
     }
+
+    public List<Map<String, String>> serveDependencyNetworkListView(String projectId, User sw360User) {
+        try {
+            ProjectService.Iface sw360ProjectClient = getThriftProjectClient();
+            return sw360ProjectClient.getAccessibleDependencyNetworkForListView(projectId, sw360User);
+        } catch (TException e) {
+            log.error(e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
 }
