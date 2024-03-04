@@ -190,7 +190,7 @@ public class SpdxPackageInfoDatabaseHandler {
         Collections.sort(relationshipsBetweenSPDXElements, new Comparator<RelationshipsBetweenSPDXElements>() {
             @Override
             public int compare(RelationshipsBetweenSPDXElements o1, RelationshipsBetweenSPDXElements o2) {
-                return o1.getIndex() > o2.getIndex() ? 1 : (o1.getIndex() == o2.getIndex() ? 0 : -1);
+                return o1.getIndex() - o2.getIndex();
             }
         });
         for (int i = 0; i<relationshipsBetweenSPDXElements.size() ; i++) {
@@ -204,7 +204,7 @@ public class SpdxPackageInfoDatabaseHandler {
         Collections.sort(annotations, new Comparator<Annotations>() {
             @Override
             public int compare(Annotations o1, Annotations o2) {
-                return o1.getIndex() > o2.getIndex() ? 1 : (o1.getIndex() == o2.getIndex() ? 0 : -1);
+                return o1.getIndex() - o2.getIndex();
             }
         });
         for (int i = 0; i<annotations.size() ; i++) {
@@ -218,7 +218,7 @@ public class SpdxPackageInfoDatabaseHandler {
         Collections.sort(externalReferenceLists, new Comparator<ExternalReference>() {
             @Override
             public int compare(ExternalReference o1, ExternalReference o2) {
-                return o1.getIndex() > o2.getIndex() ? 1 : (o1.getIndex() == o2.getIndex() ? 0 : -1);
+                return o1.getIndex() - o2.getIndex();
             }
         });
         for (int i = 0; i<externalReferenceLists.size() ; i++) {

@@ -135,6 +135,9 @@ public class SpdxDocumentCreationInfoDatabaseHandler {
     public RequestStatus updateDocumentCreationInformation(DocumentCreationInformation documentCreationInfo, User user) throws SW360Exception {
         DocumentCreationInformation actual = SPDXDocumentCreationInfoRepository.get(documentCreationInfo.getId());
         documentCreationInfo.setRevision(actual.getRevision());
+        if(documentCreationInfo.getExternalDocumentRefs().size() < actual.getExternalDocumentRefs().size()){
+            updateIndex(documentCreationInfo);
+        }
         assertNotNull(actual, "Could not find SPDX Document Creation Information to update!");
         prepareSpdxDocumentCreationInfo(documentCreationInfo);
         if(documentCreationInfo.getExternalDocumentRefs().size() < actual.getExternalDocumentRefs().size()) {
@@ -150,6 +153,20 @@ public class SpdxDocumentCreationInfoDatabaseHandler {
         SPDXDocumentCreationInfoRepository.update(documentCreationInfo);
         dbHandlerUtil.addChangeLogs(documentCreationInfo, actual, user.getEmail(), Operation.UPDATE, null, Lists.newArrayList(), null, null);
         return RequestStatus.SUCCESS;
+    }
+
+    public void updateIndex(DocumentCreationInformation documentCreationInformation) {
+        List<ExternalDocumentReferences> externalDocumentReferences = documentCreationInformation.getExternalDocumentRefs().stream().collect(Collectors.toList());
+        Collections.sort(externalDocumentReferences, new Comparator<ExternalDocumentReferences>() {
+            @Override
+            public int compare(ExternalDocumentReferences o1, ExternalDocumentReferences o2) {
+                return  o1.getIndex() - o2.getIndex();
+            }
+        });
+        for (int i = 0; i < externalDocumentReferences.size(); i++) {
+            externalDocumentReferences.get(i).setIndex(i);
+        }
+        documentCreationInformation.setExternalDocumentRefs(externalDocumentReferences.stream().collect(Collectors.toSet()));
     }
 
     // Handle index of ExternalReferences

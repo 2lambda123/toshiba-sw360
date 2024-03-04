@@ -193,7 +193,7 @@ public class SpdxDocumentDatabaseHandler {
         Collections.sort(otherLicensingInformationDetecteds, new Comparator<OtherLicensingInformationDetected>() {
             @Override
             public int compare(OtherLicensingInformationDetected o1, OtherLicensingInformationDetected o2) {
-                return o1.getIndex() > o2.getIndex() ? 1 : (o1.getIndex() == o2.getIndex() ? 0 : -1);
+                return o1.getIndex() - o2.getIndex();
             }
         });
         for (int i = 0; i < otherLicensingInformationDetecteds.size() ; i++) {
@@ -207,7 +207,7 @@ public class SpdxDocumentDatabaseHandler {
         Collections.sort(relationshipsBetweenSPDXElements, new Comparator<RelationshipsBetweenSPDXElements>() {
             @Override
             public int compare(RelationshipsBetweenSPDXElements o1, RelationshipsBetweenSPDXElements o2) {
-                return o1.getIndex() > o2.getIndex() ? 1 : (o1.getIndex() == o2.getIndex() ? 0 : -1);
+                return o1.getIndex() - o2.getIndex();
             }
         });
         for (int i = 0; i<relationshipsBetweenSPDXElements.size() ; i++) {
@@ -221,7 +221,7 @@ public class SpdxDocumentDatabaseHandler {
         Collections.sort(annotations, new Comparator<Annotations>() {
             @Override
             public int compare(Annotations o1, Annotations o2) {
-                return o1.getIndex() > o2.getIndex() ? 1 : (o1.getIndex() == o2.getIndex() ? 0 : -1);
+                return o1.getIndex() - o2.getIndex();
             }
         });
         for (int i = 0; i<annotations.size() ; i++) {
@@ -235,7 +235,7 @@ public class SpdxDocumentDatabaseHandler {
         Collections.sort(snippetInformations, new Comparator<SnippetInformation>() {
             @Override
             public int compare(SnippetInformation o1, SnippetInformation o2) {
-                return o1.getIndex() > o2.getIndex() ? 1 : (o1.getIndex() == o2.getIndex() ? 0 : -1);
+                return o1.getIndex() - o2.getIndex();
             }
         });
         for (int i = 0; i<snippetInformations.size() ; i++) {
