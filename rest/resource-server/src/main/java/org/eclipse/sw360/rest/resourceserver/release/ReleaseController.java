@@ -223,15 +223,18 @@ public class ReleaseController implements RepresentationModelProcessor<Repositor
         String spdxId = sw360Release.getSpdxId();
         if (CommonUtils.isNotNullEmptyOrWhitespace(spdxId) && SW360Constants.SPDX_DOCUMENT_ENABLED) {
             SPDXDocument spdxDocument = releaseService.getSPDXDocumentById(spdxId, sw360User);
+            restControllerHelper.sortSectionForSPDXDocument(spdxDocument);
             restControllerHelper.addEmbeddedSpdxDocument(halRelease, spdxDocument);
             String spdxDocumentCreationInfoId = spdxDocument.getSpdxDocumentCreationInfoId();
             if (CommonUtils.isNotNullEmptyOrWhitespace(spdxDocumentCreationInfoId)) {
                 DocumentCreationInformation documentCreationInformation = releaseService.getDocumentCreationInformationById(spdxDocumentCreationInfoId, sw360User);
+                restControllerHelper.sortSectionForDocumentCreation(documentCreationInformation);
                 restControllerHelper.addEmbeddedDocumentCreationInformation(halRelease, documentCreationInformation);
             }
             String spdxPackageInfoId = spdxDocument.getSpdxPackageInfoIds().stream().findFirst().get();
             if(CommonUtils.isNotNullEmptyOrWhitespace(spdxPackageInfoId)) {
                 PackageInformation packageInformation = releaseService.getPackageInformationById(spdxPackageInfoId, sw360User);
+                restControllerHelper.sortSectionForPackageInformation(packageInformation);
                 restControllerHelper.addEmbeddedPackageInformation(halRelease, packageInformation);
             }
         }

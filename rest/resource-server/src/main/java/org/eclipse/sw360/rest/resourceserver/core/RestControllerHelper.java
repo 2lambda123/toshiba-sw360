@@ -123,15 +123,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -1704,4 +1696,61 @@ public class RestControllerHelper<T> {
         return sumIndex == sumActualIndex;
     }
 
+    public void sortSectionForSPDXDocument(SPDXDocument spdxDocument) {
+        Set<SnippetInformation> snippetInformations = spdxDocument.getSnippets().stream()
+                .sorted(Comparator.comparing(SnippetInformation::getIndex)) // sort while streaming
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        spdxDocument.setSnippets(snippetInformations);
+
+        for (SnippetInformation snippetInformation: spdxDocument.getSnippets()) {
+            Set<SnippetRange> snippetRanges = snippetInformation.getSnippetRanges().stream()
+                    .sorted(Comparator.comparing(SnippetRange::getIndex)) // sort while streaming
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+            snippetInformation.setSnippetRanges(snippetRanges);
+        }
+
+        Set<OtherLicensingInformationDetected> otherLicensingInformationDetecteds = spdxDocument.getOtherLicensingInformationDetecteds().stream()
+                .sorted(Comparator.comparing(OtherLicensingInformationDetected::getIndex)) // sort while streaming
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        spdxDocument.setOtherLicensingInformationDetecteds(otherLicensingInformationDetecteds);
+
+        Set<RelationshipsBetweenSPDXElements> relationshipsBetweenSPDXElements = spdxDocument.getRelationships().stream()
+                .sorted(Comparator.comparing(RelationshipsBetweenSPDXElements::getIndex)) // sort while streaming
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        spdxDocument.setRelationships(relationshipsBetweenSPDXElements);
+
+        Set<Annotations> annotations = spdxDocument.getAnnotations().stream()
+                .sorted(Comparator.comparing(Annotations::getIndex)) // sort while streaming
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        spdxDocument.setAnnotations(annotations);
+    }
+
+    public void sortSectionForPackageInformation(PackageInformation packageInformation) {
+        Set<CheckSum> checkSums = packageInformation.getChecksums().stream()
+                .sorted(Comparator.comparing(CheckSum::getIndex)) // sort while streaming
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        packageInformation.setChecksums(checkSums);
+
+        Set<ExternalReference> externalReferences = packageInformation.getExternalRefs().stream()
+                .sorted(Comparator.comparing(ExternalReference::getIndex)) // sort while streaming
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        packageInformation.setExternalRefs(externalReferences);
+
+        Set<RelationshipsBetweenSPDXElements> relationshipsBetweenSPDXElements = packageInformation.getRelationships().stream()
+                .sorted(Comparator.comparing(RelationshipsBetweenSPDXElements::getIndex)) // sort while streaming
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        packageInformation.setRelationships(relationshipsBetweenSPDXElements);
+
+        Set<Annotations> annotations = packageInformation.getAnnotations().stream()
+                .sorted(Comparator.comparing(Annotations::getIndex)) // sort while streaming
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        packageInformation.setAnnotations(annotations);
+    }
+
+    public void sortSectionForDocumentCreation(DocumentCreationInformation documentCreationInformation) {
+        Set<ExternalDocumentReferences> externalDocumentReferences = documentCreationInformation.getExternalDocumentRefs().stream()
+                .sorted(Comparator.comparing(ExternalDocumentReferences::getIndex)) // sort while streaming
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        documentCreationInformation.setExternalDocumentRefs(externalDocumentReferences);
+    }
 }
