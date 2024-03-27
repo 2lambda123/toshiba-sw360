@@ -77,6 +77,9 @@ require(['jquery', 'bridges/datatables', 'utils/render'], function ($, datatable
     /* Print all attachment table data as array into the html page */
     <core_rt:forEach items="${licenseObligationData}" var="entry" varStatus="loop">
         <core_rt:set var="licenseObligations" value="${entry.value}" />
+        var obligText = "<sw360:out value='${licenseObligations.text}' stripNewlines='false' jsQuoting='true'/>";
+        obligText = obligText.replace(/[\r\n]/g, '<br>');
+        obligText = obligText.replace(/\t/g, '&ensp;&ensp;&ensp;&ensp;');
         licenseObligation_licenseLinks = [];
         licenseObligation_releaseLinks = [];
         <core_rt:forEach items="${licenseObligations.licenseIds}" var="licenseId">
@@ -99,7 +102,7 @@ require(['jquery', 'bridges/datatables', 'utils/render'], function ($, datatable
             "releaseLinks": licenseObligation_releaseLinks,
             "type": "<sw360:DisplayEnum value='${licenseObligations.obligationType}'/>",
             "id": "<sw360:out value='${licenseObligations.id}'/>",
-            "text": '<sw360:out value="${licenseObligations.text}"/>',
+            "text": '<p style="overflow: auto; max-height: 20rem;">' + obligText + '</p>',
         });
     </core_rt:forEach >
 

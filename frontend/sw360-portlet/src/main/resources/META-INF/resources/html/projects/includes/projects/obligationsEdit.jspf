@@ -544,7 +544,7 @@ require(['jquery', 'bridges/datatables', 'utils/render', 'modules/button', 'modu
                     mapValue.obligationType = $.parseHTML(rowData.type)[0].textContent.toUpperCase();
                 mapValue.id = rowData.id;
                 mapKey = rowData.obligation;
-                mapValue.text = $.parseHTML(rowData.text)[0].textContent;
+                mapValue.text = $.parseHTML(rowData.text)[0].innerHTML.replace(/\s{4}/g, '\t').replace(/<br>/g, '\n')
             }
             obligationMap.set(mapKey, mapValue);
         });
@@ -867,7 +867,7 @@ require(['jquery', 'bridges/datatables', 'utils/render', 'modules/button', 'modu
                   mapValue.obligationType = type.length == 0 ? "<%=ObligationType.OBLIGATION%>" : type.toUpperCase();
                   mapValue.modifiedOn = date;
                   mapValue.obligationLevel = level;
-                  mapValue.text = $.parseHTML(rowData.text)[0].textContent;
+                  mapValue.text = $.parseHTML(rowData.text)[0].innerHTML.replace(/\s{4}/g, '\t').replace(/<br>/g, '\n')
                   obligationMap.set(mapKey, mapValue);
               }
           });
