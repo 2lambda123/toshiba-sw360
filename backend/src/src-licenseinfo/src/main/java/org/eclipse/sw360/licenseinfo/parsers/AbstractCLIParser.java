@@ -10,6 +10,7 @@
 package org.eclipse.sw360.licenseinfo.parsers;
 
 import com.google.common.collect.Sets;
+import static io.github.pixee.security.XMLInputFactorySecurity.hardenFactory;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -112,7 +113,7 @@ public abstract class AbstractCLIParser extends LicenseInfoParser {
     }
 
     protected <T> boolean hasThisXMLRootElement(AttachmentContent content, String rootElementNamespace, String rootElementName, User user, T context) throws TException {
-        XMLInputFactory xmlif = XMLInputFactory.newFactory();
+        XMLInputFactory xmlif = hardenFactory(XMLInputFactory.newFactory());
         XMLStreamReader xmlStreamReader = null;
         InputStream attachmentStream = null;
         try {
