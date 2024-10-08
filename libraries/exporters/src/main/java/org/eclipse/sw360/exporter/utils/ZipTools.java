@@ -11,6 +11,7 @@
  */
 package org.eclipse.sw360.exporter.utils;
 
+import io.github.pixee.security.ZipSecurity;
 import java.io.*;
 import java.util.HashMap;
 import java.util.zip.ZipEntry;
@@ -32,7 +33,7 @@ public class ZipTools {
     }
 
     public static void extractZipToInputStreamMap(InputStream in, HashMap<String, InputStream> inputMap) throws IOException {
-        ZipInputStream zis = new ZipInputStream(new BufferedInputStream(in));
+        ZipInputStream zis = ZipSecurity.createHardenedInputStream(new BufferedInputStream(in));
         /** I assume that the license Zip will not be so big and I can keep it in memory with impunity**/
         /** Nevertheless I do not want to go through the file twice, so read first and then check :) **/
         final int BUFFER = 2048;
